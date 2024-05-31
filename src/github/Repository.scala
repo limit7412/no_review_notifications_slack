@@ -13,23 +13,101 @@ private def githubRequest(method: Method, path: Uri) = {
     .header("Authorization", s"token ${sys.env("GITHUB_TOKEN")}")
 }
 
-object UserRepository {
-  def getAllRepos(username: String) = {
+object RepoRepository {
+  def findByUsername(username: String) = {
     var response =
       githubRequest(Method.GET, uri"${GITHUB_API_URL}/users/${username}/repos")
         .send()
 
-    response.body
+    val body = response.body match {
+      case Right(res) => res
+      case Left(e) => {
+        println(s"user repos data not found: ${e}")
+        "[]"
+      }
+    }
+
+    read[List[Models.Repo]](body)
+  }
+
+  def findByTeam(login: String, slug: String) = {
+    var response =
+      githubRequest(
+        Method.GET,
+        uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/repos"
+      )
+        .send()
+
+    val body = response.body match {
+      case Right(res) => res
+      case Left(e) => {
+        println(s"team repos data not found: ${e}")
+        "[]"
+      }
+    }
+
+    read[List[Models.Repo]](body)
+  }
+}
+
+object OrganizationRepository {
+  def findByUsername(username: String) = {
+    var response =
+      githubRequest(Method.GET, uri"${GITHUB_API_URL}/users/${username}/orgs")
+        .send()
+
+    val body = response.body match {
+      case Right(res) => res
+      case Left(e) => {
+        println(s"user orgs data not found: ${e}")
+        "[]"
+      }
+    }
+
+    read[List[Models.Organization]](body)
   }
 }
 
 object TeamRepository {
-  // /users/{username}/orgs
-  // /orgs/{org}/teams
-  // /orgs/{org}/teams/{team_slug}/members
-  // /orgs/{org}/teams/{team_slug}/repos
+  def findByOrganization(login: String) = {
+    var response =
+      githubRequest(Method.GET, uri"${GITHUB_API_URL}/orgs/${login}/teams")
+        .send()
+
+    val body = response.body match {
+      case Right(res) => res
+      case Left(e) => {
+        println(s"org teams data not found: ${e}")
+        "[]"
+      }
+    }
+
+    read[List[Models.Team]](body)
+  }
+}
+
+object UserRepository {
+  def findByTeam(login: String, slug: String) = {
+    var response =
+      githubRequest(
+        Method.GET,
+        uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/members"
+      )
+        .send()
+
+    val body = response.body match {
+      case Right(res) => res
+      case Left(e) => {
+        println(s"team members data not found: ${e}")
+        "[]"
+      }
+    }
+
+    read[List[Models.User]](body)
+  }
 }
 
 object PullRepository {
   // /repos/{owner}/{repo}/pulls
+  // /repos/{full_name}/pulls
 }
