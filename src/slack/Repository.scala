@@ -14,10 +14,10 @@ object PostRepository {
   }
 
   def sendAttachment(attachment: Models.Attachment) = {
-    sendPost(Models.Post(Array(attachment)))
+    sendPost(Models.Post(List(attachment)))
   }
 
-  def sendAttachments(attachments: Array[Models.Attachment]) = {
+  def sendAttachments(attachments: List[Models.Attachment]) = {
     sendPost(Models.Post(attachments))
   }
 }

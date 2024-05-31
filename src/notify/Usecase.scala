@@ -7,7 +7,7 @@ object Usecase {
   def check = {
     val testRes = github.Usecase.getRepos
 
-    var attachment = Array(
+    var attachment = List(
       slack.Models.Attachment(
         title = "test"
       ),

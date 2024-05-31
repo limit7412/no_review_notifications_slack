@@ -18,7 +18,7 @@ object Models {
   ) derives ReadWriter
 
   case class Post(
-      attachments: Array[Attachment]
+      attachments: List[Attachment]
   ) derives ReadWriter
 
 }
