@@ -24,3 +24,5 @@ bootstrap
 .vscode/launch.json
 
 env.yml
+
+run.sh
