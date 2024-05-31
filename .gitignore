@@ -22,3 +22,5 @@ bootstrap
 .idea/
 
 .vscode/launch.json
+
+env.yml
