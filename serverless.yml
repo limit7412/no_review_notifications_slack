@@ -6,7 +6,7 @@ custom:
 provider:
   name: aws
   runtime: provided
-  timeout: 20
+  timeout: 300
   region: ap-northeast-1
   ecr:
     images:
@@ -24,4 +24,4 @@ functions:
       command:
         - handler
     events:
-      - schedule: cron(0 10 * * ? *) # UTC
+      - schedule: cron(0 8 * * ? *) # UTC
