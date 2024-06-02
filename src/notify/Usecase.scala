@@ -5,8 +5,7 @@ import slack.Models
 
 object Usecase {
   def check = {
-    val testRes = github.Usecase.getRepos
-    println(testRes)
+    val pulls = github.Usecase.getAssignPulls
 
     // var attachment = List(
     //   slack.Models.Attachment(

@@ -22,7 +22,7 @@ object RepoRepository {
     val body = response.body match {
       case Right(res) => res
       case Left(e) => {
-        println(s"user repos data not found: ${e}")
+        System.err.println(s"user(${username}) repos data not found: ${e}")
         "[]"
       }
     }
@@ -41,7 +41,9 @@ object RepoRepository {
     val body = response.body match {
       case Right(res) => res
       case Left(e) => {
-        println(s"team repos data not found: ${e}")
+        System.err.println(
+          s"team(${login}, ${slug}) repos data not found: ${e}"
+        )
         "[]"
       }
     }
@@ -59,7 +61,7 @@ object OrganizationRepository {
     val body = response.body match {
       case Right(res) => res
       case Left(e) => {
-        println(s"user orgs data not found: ${e}")
+        System.err.println(s"user(${username}) orgs data not found: ${e}")
         "[]"
       }
     }
@@ -77,7 +79,7 @@ object TeamRepository {
     val body = response.body match {
       case Right(res) => res
       case Left(e) => {
-        println(s"org teams data not found: ${e}")
+        System.err.println(s"org(${login}) teams data not found: ${e}")
         "[]"
       }
     }
@@ -98,7 +100,9 @@ object UserRepository {
     val body = response.body match {
       case Right(res) => res
       case Left(e) => {
-        println(s"team members data not found: ${e}")
+        System.err.println(
+          s"team(${login}, ${slug}) members data not found: ${e}"
+        )
         "[]"
       }
     }
@@ -108,6 +112,24 @@ object UserRepository {
 }
 
 object PullRepository {
-  // /repos/{owner}/{repo}/pulls
-  // /repos/{full_name}/pulls
+  def findByFullName(owner: String, name: String) = {
+    var response =
+      githubRequest(
+        Method.GET,
+        uri"${GITHUB_API_URL}/repos/${owner}/${name}/pulls?state=closed" // FIXME: remove test query
+      )
+        .send()
+
+    val body = response.body match {
+      case Right(res) => res
+      case Left(e) => {
+        System.err.println(
+          s"target(${owner}, ${name}) pulls data not found: ${e}"
+        )
+        "[]"
+      }
+    }
+
+    read[List[Models.Pull]](body)
+  }
 }
