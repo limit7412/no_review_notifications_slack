@@ -22,15 +22,30 @@ object Models {
   ) derives ReadWriter
 
   case class User(
-      login: String = ""
-  ) derives ReadWriter
+      login: String = "",
+      html_url: String = ""
+  ) derives ReadWriter {
+    def toSlackLink() = {
+      s"<${html_url}|${login}>"
+    }
+  }
 
   case class Pull(
-      url: String = "",
+      html_url: String = "",
       title: String = "",
       state: String = "",
+      user: User = null,
       assignees: List[User] = Nil,
       requested_reviewers: List[User] = Nil,
-      requested_teams: List[Team] = Nil
+      requested_teams: List[Team] = Nil,
+      base: PullBase = null
+  ) derives ReadWriter {
+    def toSlackLink() = {
+      s"[${base.repo.full_name}] <${html_url}|${title}> (from ${user.toSlackLink()})"
+    }
+  }
+
+  case class PullBase(
+      repo: Repo = null
   ) derives ReadWriter
 }

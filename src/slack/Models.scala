@@ -5,13 +5,13 @@ import upickle.default._
 object Models {
   case class Attachment(
       fallback: String = "",
-      authorName: String = "",
-      authorIcon: String = "",
-      authorLink: String = "",
+      author_Name: String = "",
+      author_icon: String = "",
+      author_link: String = "",
       pretext: String = "",
       color: String = "",
       title: String = "",
-      titleLink: String = "",
+      title_link: String = "",
       text: String = "",
       footer: String = "",
       footerIcon: String = ""
