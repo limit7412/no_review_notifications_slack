@@ -116,7 +116,7 @@ object PullRepository {
     var response =
       githubRequest(
         Method.GET,
-        uri"${GITHUB_API_URL}/repos/${owner}/${name}/pulls?state=closed" // FIXME: remove test query
+        uri"${GITHUB_API_URL}/repos/${owner}/${name}/pulls"
       )
         .send()
 
