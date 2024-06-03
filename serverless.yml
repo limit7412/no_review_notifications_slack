@@ -1,3 +1,5 @@
+org: qazx7412
+app: no-review-notifications-slack
 service: no-review-notifications-slack
 
 custom:
