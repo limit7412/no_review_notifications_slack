@@ -8,7 +8,7 @@ object Usecase {
     val (assignPulls, reviewerPulls, teamReviewerPulls) =
       github.Usecase.getAssignPulls
 
-    val isReviewer = (reviewerPulls.sizeIs > 1)
+    val isReviewer = ((reviewerPulls ++ teamReviewerPulls).sizeIs > 1)
 
     val mention = if (isReviewer) {
       s"<@${sys.env("SLACK_ID")}> "
@@ -29,20 +29,20 @@ object Usecase {
       ),
       slack.Models.Attachment(
         title = "reviewer",
-        color = if (isReviewer) "#dc143c" else "#D8D8D8",
+        color = if (reviewerPulls.sizeIs > 1) "#dc143c" else "#D8D8D8",
         text =
           reviewerPulls.map({ pull => { pull.toSlackLink() } }).mkString("\n")
       ),
       slack.Models.Attachment(
         title = "reviewer(team)",
-        color = if (teamReviewerPulls.sizeIs > 1) "#ff8c00" else "#D8D8D8",
+        color = if (teamReviewerPulls.sizeIs > 1) "#dc143c" else "#D8D8D8",
         text = teamReviewerPulls
           .map({ pull => { pull.toSlackLink() } })
           .mkString("\n")
       ),
       slack.Models.Attachment(
         title = "assign",
-        color = if (assignPulls.sizeIs > 1) "#1e90ff" else "#D8D8D8",
+        color = if (assignPulls.sizeIs > 1) "#ff8c00" else "#D8D8D8",
         text =
           assignPulls.map({ pull => { pull.toSlackLink() } }).mkString("\n")
       )
