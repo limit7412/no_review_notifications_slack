@@ -5,7 +5,7 @@ import upickle.default._
 object Models {
   case class Attachment(
       fallback: String = "",
-      author_Name: String = "",
+      author_name: String = "",
       author_icon: String = "",
       author_link: String = "",
       pretext: String = "",
