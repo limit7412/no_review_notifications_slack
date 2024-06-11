@@ -8,7 +8,7 @@ RUN scala-cli config power true
 RUN scala-cli --power package --native-image -o bootstrap .
 RUN chmod +x bootstrap
 
-FROM public.ecr.aws/lambda/provided:al2
+FROM public.ecr.aws/lambda/provided:latest
 
 COPY --from=build-image /work/bootstrap /var/runtime/
 
