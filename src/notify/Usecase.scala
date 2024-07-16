@@ -5,12 +5,14 @@ import slack.Models
 
 object Usecase {
   def check = {
+    val isHoliday = holiday.CheckHolidayRepository.get
+
     val (assignPulls, reviewerPulls, teamReviewerPulls) =
       github.Usecase.getAssignPulls
 
     val isReviewer = ((reviewerPulls ++ teamReviewerPulls).sizeIs >= 1)
 
-    val mention = if (isReviewer) {
+    val mention = if (isReviewer && !isHoliday) {
       s"<@${sys.env("SLACK_ID")}> "
     } else {
       ""
