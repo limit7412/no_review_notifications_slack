@@ -1,0 +1,9 @@
+{
+  "name": "no-review-notifications-slack",
+  "version": "1.0.0",
+  "private": true,
+  "description": "githubの未レビューPRを集計しslackで通知",
+  "devDependencies": {
+    "serverless-plugin-scripts": "^1.0.2"
+  }
+}

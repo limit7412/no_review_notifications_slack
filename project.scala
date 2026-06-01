@@ -1,5 +1,7 @@
-//> using packaging.graalvmArgs --static
-//> using packaging.graalvmArgs --no-fallback
+// for GraalVM
+// //> using packaging.graalvmArgs --static
+// //> using packaging.graalvmArgs --no-fallback
+// for Scala Native
+//> using platform native
 //> using toolkit default
-//> using dep "com.softwaremill.sttp.client4::core:4.0.0-M20"
-//> using dep "com.lihaoyi::upickle:4.0.2"
+//> using dep "com.lihaoyi::upickle:4.4.2"
