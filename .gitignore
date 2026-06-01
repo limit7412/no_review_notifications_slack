@@ -19,6 +19,9 @@ project/plugins/project/
 
 bootstrap
 
+node_modules/
+package-lock.json
+
 .idea/
 
 .vscode/launch.json

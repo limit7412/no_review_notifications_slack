@@ -2,10 +2,31 @@
 
   - githubの未レビューPRを集計しslackで通知
   - scala3
-    - GraalVM
+    - Scala Native
     - scala-cli
   - aws lambda
+    - provided.al2023 カスタムランタイム (zipアップロード形式)
   - serverless framework
+
+## デプロイ
+
+`bootstrap` (Scala Nativeバイナリ) をビルドして zip でアップロードする。
+ビルドは Lambda 実行環境 (provided.al2023) と glibc/libcurl の互換性を保つため、
+Amazon Linux 2023 のコンテナ内で行う ([Dockerfile](Dockerfile))。
+
+`serverless-plugin-scripts` により、`sls deploy` / `sls package` の
+パッケージング直前 (`before:package:createDeploymentArtifacts`) に
+`bootstrap` が自動でビルド・取り出しされる (Docker が必要)。
+
+```shell
+# プラグインをインストール
+npm install
+
+# デプロイ (bootstrap の生成 → zip化 → アップロードまで自動)
+sls deploy --stage <stage_name>
+```
+
+## 環境変数 (env.yml)
 
 ```
 WEBHOOK_URL: <通知用webhook>
