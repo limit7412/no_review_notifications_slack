@@ -5,13 +5,14 @@
     - Scala Native
     - scala-cli
   - aws lambda
-    - provided.al2 カスタムランタイム (zipアップロード形式)
+    - provided.al2023 カスタムランタイム (zipアップロード形式)
   - serverless framework
 
 ## デプロイ
 
 `bootstrap` (Scala Nativeバイナリ) をビルドして zip でアップロードする。
-ビルドは Lambda 実行環境と互換性を保つためコンテナ内で行う。
+ビルドは Lambda 実行環境 (provided.al2023) と glibc/libcurl の互換性を保つため、
+Amazon Linux 2023 のコンテナ内で行う ([Dockerfile](Dockerfile))。
 
 `serverless-plugin-scripts` により、`sls deploy` / `sls package` の
 パッケージング直前 (`before:package:createDeploymentArtifacts`) に

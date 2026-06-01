@@ -18,7 +18,7 @@ custom:
 
 provider:
   name: aws
-  runtime: provided.al2
+  runtime: provided.al2023
   architecture: x86_64
   timeout: 300
   region: ap-northeast-1
