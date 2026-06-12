@@ -43,7 +43,9 @@ object Usecase {
 
     val allPulls = repos
       .flatMap(repo =>
-        PullRepository.findByFullName(repo.owner.login, repo.name)
+        repo.owner.toList.flatMap(owner =>
+          PullRepository.findByFullName(owner.login, repo.name)
+        )
       )
 
     val assignPulls = allPulls

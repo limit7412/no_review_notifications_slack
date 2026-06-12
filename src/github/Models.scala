@@ -6,7 +6,7 @@ object Models {
   case class Repo(
       name: String = "",
       full_name: String = "",
-      owner: User = null,
+      owner: Option[User] = None,
       pulls_url: String = ""
   ) derives ReadWriter
 
@@ -34,18 +34,20 @@ object Models {
       html_url: String = "",
       title: String = "",
       state: String = "",
-      user: User = null,
+      user: Option[User] = None,
       assignees: List[User] = Nil,
       requested_reviewers: List[User] = Nil,
       requested_teams: List[Team] = Nil,
-      base: PullBase = null
+      base: Option[PullBase] = None
   ) derives ReadWriter {
     def toSlackLink() = {
-      s"[${base.repo.full_name}] <${html_url}|${title}> (from ${user.toSlackLink()})"
+      val repoName = base.flatMap(_.repo).map(_.full_name).getOrElse("")
+      val from = user.map(_.toSlackLink()).getOrElse("")
+      s"[${repoName}] <${html_url}|${title}> (from ${from})"
     }
   }
 
   case class PullBase(
-      repo: Repo = null
+      repo: Option[Repo] = None
   ) derives ReadWriter
 }
