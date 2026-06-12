@@ -28,10 +28,7 @@ object Usecase {
         teams.flatMap(team => RepoRepository.findByTeam(org.login, team.slug))
       }.toList
 
-    val teamSlugs = orgTeamsMap
-      .flatMap((_, teams) => teams)
-      .toList
-      .map(_.slug)
+    val teamSlugs = orgTeamsMap.values.flatten.map(_.slug).toList
 
     (userRepos ++ teamRepos, teamSlugs)
   }
@@ -41,12 +38,11 @@ object Usecase {
 
     val (repos, teamSlugs) = getRepos
 
-    val allPulls = repos
-      .flatMap(repo =>
-        repo.owner.toList.flatMap(owner =>
-          PullRepository.findByFullName(owner.login, repo.name)
-        )
-      )
+    val allPulls = for {
+      repo <- repos
+      owner <- repo.owner.toList
+      pull <- PullRepository.findByFullName(owner.login, repo.name)
+    } yield pull
 
     val assignPulls = allPulls
       .filter(_.assignees.exists(_.login == userName))

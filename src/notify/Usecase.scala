@@ -10,7 +10,7 @@ object Usecase {
     val (assignPulls, reviewerPulls, teamReviewerPulls) =
       github.Usecase.getAssignPulls
 
-    val isReviewer = (reviewerPulls ++ teamReviewerPulls).nonEmpty
+    val isReviewer = reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
 
     val mention = if (isReviewer && !isHoliday) {
       s"<@${sys.env("SLACK_ID")}> "

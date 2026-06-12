@@ -42,8 +42,9 @@ object Models {
   ) derives ReadWriter {
     def toSlackLink() = {
       val repoName = base.flatMap(_.repo).map(_.full_name).getOrElse("")
-      val from = user.map(_.toSlackLink()).getOrElse("")
-      s"[${repoName}] <${html_url}|${title}> (from ${from})"
+      val fromSuffix =
+        user.map(u => s" (from ${u.toSlackLink()})").getOrElse("")
+      s"[${repoName}] <${html_url}|${title}>$fromSuffix"
     }
   }
 
