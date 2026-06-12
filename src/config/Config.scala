@@ -13,7 +13,8 @@ case class Config(
 
 object Config {
   // 起動時に1度だけ読み込む。必須環境変数が欠落していれば例外で即座に失敗する。
-  lazy val instance: Config = load()
+  // lazy val ではなく val とし、Cold Start の初期化フェーズで欠落を早期検知する。
+  val instance: Config = load()
 
   private def load(): Config =
     Config(
