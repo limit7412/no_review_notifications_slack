@@ -5,6 +5,10 @@ plugins:
 
 custom:
   defaultStage: dev
+  # スケジュール実行は prod ステージでのみ有効にする。
+  # それ以外のステージ(dev等)ではデプロイされるが EventBridge ルールは無効化される。
+  scheduleEnabled:
+    prod: true
   scripts:
     hooks:
       # パッケージング(zip化)直前に、Lambda互換のネイティブバイナリ bootstrap を
@@ -35,4 +39,6 @@ functions:
   no_review_notifications_slack:
     handler: handler
     events:
-      - schedule: cron(0 8 * * ? *) # UTC
+      - schedule:
+          rate: cron(0 8 * * ? *) # UTC
+          enabled: ${self:custom.scheduleEnabled.${self:provider.stage}, false}
