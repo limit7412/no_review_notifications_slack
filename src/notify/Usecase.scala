@@ -10,6 +10,7 @@ object Usecase {
     val (assignPulls, reviewerPulls, teamReviewerPulls) =
       github.Usecase.getAssignPulls
 
+    // 片方でもレビュアー指名されているPRが存在すれば通知対象
     val isReviewer = reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
 
     val mention = if (isReviewer && !isHoliday) {
