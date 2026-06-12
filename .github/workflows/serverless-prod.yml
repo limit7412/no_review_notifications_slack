@@ -1,0 +1,42 @@
+name: serverless-prod
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: setup node.js
+        uses: actions/setup-node@v4
+
+      - name: install sls
+        run: npm i -g serverless
+
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: install plugins
+        run: npm install
+
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-1
+
+      - name: get env
+        run: |
+          aws s3 cp s3://limit7412-workflow-env/no_review_notifications_slack/prod/env.yml .
+
+      - name: deploy
+        run: sls deploy --stage prod
+        env:
+          SERVERLESS_ACCESS_KEY: ${{ secrets.SERVERLESS_ACCESS_KEY }}
