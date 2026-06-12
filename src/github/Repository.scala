@@ -15,7 +15,7 @@ private def githubRequest(method: Method, path: Uri) = {
 
 object RepoRepository {
   def findByUsername(username: String) = {
-    var response =
+    val response =
       githubRequest(Method.GET, uri"${GITHUB_API_URL}/users/${username}/repos")
         .send()
 
@@ -31,7 +31,7 @@ object RepoRepository {
   }
 
   def findByTeam(login: String, slug: String) = {
-    var response =
+    val response =
       githubRequest(
         Method.GET,
         uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/repos"
@@ -54,7 +54,7 @@ object RepoRepository {
 
 object OrganizationRepository {
   def findByUsername(username: String) = {
-    var response =
+    val response =
       githubRequest(Method.GET, uri"${GITHUB_API_URL}/users/${username}/orgs")
         .send()
 
@@ -72,7 +72,7 @@ object OrganizationRepository {
 
 object TeamRepository {
   def findByOrganization(login: String) = {
-    var response =
+    val response =
       githubRequest(Method.GET, uri"${GITHUB_API_URL}/orgs/${login}/teams")
         .send()
 
@@ -90,7 +90,7 @@ object TeamRepository {
 
 object UserRepository {
   def findByTeam(login: String, slug: String) = {
-    var response =
+    val response =
       githubRequest(
         Method.GET,
         uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/members"

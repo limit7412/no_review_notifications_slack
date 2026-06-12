@@ -10,7 +10,7 @@ object Usecase {
     val (assignPulls, reviewerPulls, teamReviewerPulls) =
       github.Usecase.getAssignPulls
 
-    val isReviewer = ((reviewerPulls ++ teamReviewerPulls).sizeIs >= 1)
+    val isReviewer = (reviewerPulls ++ teamReviewerPulls).nonEmpty
 
     val mention = if (isReviewer && !isHoliday) {
       s"<@${sys.env("SLACK_ID")}> "
@@ -31,22 +31,18 @@ object Usecase {
       ),
       slack.Models.Attachment(
         title = "reviewer",
-        color = if (reviewerPulls.sizeIs >= 1) "#dc143c" else "#D8D8D8",
-        text =
-          reviewerPulls.map({ pull => { pull.toSlackLink() } }).mkString("\n")
+        color = if (reviewerPulls.nonEmpty) "#dc143c" else "#D8D8D8",
+        text = reviewerPulls.map(_.toSlackLink()).mkString("\n")
       ),
       slack.Models.Attachment(
         title = "reviewer(team)",
-        color = if (teamReviewerPulls.sizeIs >= 1) "#ff8c00" else "#D8D8D8",
-        text = teamReviewerPulls
-          .map({ pull => { pull.toSlackLink() } })
-          .mkString("\n")
+        color = if (teamReviewerPulls.nonEmpty) "#ff8c00" else "#D8D8D8",
+        text = teamReviewerPulls.map(_.toSlackLink()).mkString("\n")
       ),
       slack.Models.Attachment(
         title = "assign",
-        color = if (assignPulls.sizeIs >= 1) "#1e90ff" else "#D8D8D8",
-        text =
-          assignPulls.map({ pull => { pull.toSlackLink() } }).mkString("\n")
+        color = if (assignPulls.nonEmpty) "#1e90ff" else "#D8D8D8",
+        text = assignPulls.map(_.toSlackLink()).mkString("\n")
       )
     )
 

@@ -21,7 +21,7 @@ object Lambda {
     this
   }
   private def handler[A: Reader](callback: A => Response): Lambda.type = {
-    var response = quickRequest
+    val response = quickRequest
       .get(
         uri"http://${sys.env("AWS_LAMBDA_RUNTIME_API")}/2018-06-01/runtime/invocation/next"
       )

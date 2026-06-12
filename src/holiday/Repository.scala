@@ -8,7 +8,7 @@ import sttp.model.Uri
 // https://s-proj.com/utils/holiday.html
 object CheckHolidayRepository {
   def get = {
-    var response =
+    val response =
       basicRequest
         .method(Method.GET, uri"https://s-proj.com/utils/checkHoliday.php")
         .send()
