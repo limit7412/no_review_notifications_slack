@@ -1,7 +1,7 @@
 import serverless.Lambda
 import notify.Usecase
 
-@main def main = sys.env("ENV") match {
+@main def main = config.Config.instance.env match {
   case "local" => handler("1970-01-01T00:00:00Z")
   case _ =>
     serverless.Lambda

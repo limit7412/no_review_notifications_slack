@@ -7,7 +7,7 @@ object PostRepository {
   private def sendPost(post: Models.Post) = {
     basicRequest
       .post(
-        uri"${sys.env("WEBHOOK_URL")}"
+        uri"${config.Config.instance.webhookUrl}"
       )
       .body(write(post))
       .send()
