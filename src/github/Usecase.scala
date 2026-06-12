@@ -10,37 +10,28 @@ object Usecase {
 
     val orgTeamsMap = OrganizationRepository
       .findByUsername(userName)
-      .map({ org =>
+      .map { org =>
         val team = TeamRepository
           .findByOrganization(org.login)
-          .filter({ team =>
+          .filter { team =>
             UserRepository
               .findByTeam(org.login, team.slug)
-              .exists({ user => user.login == userName })
-          })
+              .exists(_.login == userName)
+          }
 
         (org, team)
-      })
+      }
       .toMap
 
     val teamRepos =
-      orgTeamsMap
-        .flatMap({ (org, teams) =>
-          teams
-            .flatMap({ team =>
-              RepoRepository.findByTeam(org.login, team.slug)
-            })
-        })
-        .toList
+      orgTeamsMap.flatMap { (org, teams) =>
+        teams.flatMap(team => RepoRepository.findByTeam(org.login, team.slug))
+      }.toList
 
     val teamSlugs = orgTeamsMap
-      .flatMap({ (_, teams) =>
-        teams
-      })
+      .flatMap((_, teams) => teams)
       .toList
-      .map({ team =>
-        team.slug
-      })
+      .map(_.slug)
 
     (userRepos ++ teamRepos, teamSlugs)
   }
@@ -51,30 +42,18 @@ object Usecase {
     val (repos, teamSlugs) = getRepos
 
     val allPulls = repos
-      .flatMap({ repo =>
-        PullRepository
-          .findByFullName(repo.owner.login, repo.name)
-      })
+      .flatMap(repo =>
+        PullRepository.findByFullName(repo.owner.login, repo.name)
+      )
 
     val assignPulls = allPulls
-      .filter({ pull =>
-        pull.assignees
-          .exists({ user => user.login == userName })
-      })
+      .filter(_.assignees.exists(_.login == userName))
 
     val reviewerPulls = allPulls
-      .filter({ pull =>
-        pull.requested_reviewers
-          .exists({ user => user.login == userName })
-      })
+      .filter(_.requested_reviewers.exists(_.login == userName))
 
     val teamReviewerPulls = allPulls
-      .filter({ pull =>
-        pull.requested_teams
-          .exists({ team =>
-            teamSlugs.exists({ teamSlug => teamSlug == team.slug })
-          })
-      })
+      .filter(_.requested_teams.exists(team => teamSlugs.contains(team.slug)))
 
     (assignPulls, reviewerPulls, teamReviewerPulls)
   }
