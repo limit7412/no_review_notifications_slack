@@ -10,20 +10,15 @@ object Usecase {
     val (assignPulls, reviewerPulls, teamReviewerPulls) =
       github.Usecase.getAssignPulls
 
-    // 自分(個人) または 所属チーム宛のレビュー依頼が1件でも残っているか。
-    // これが true のときだけ「至急対応すべきレビューがある」状態とみなす。
-    // (単にレビュアー以外でアサインされているだけの状態とは区別する)
+    // 片方でもレビュアー指名されているPRが存在すれば通知対象
     val isReviewer = reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
 
-    // 至急対応すべきレビューがあり、かつ平日のときだけ本人にメンションする。
-    // 休日は通知だけ行いメンション(呼び出し)はしない。
     val mention = if (isReviewer && !isHoliday) {
       s"<@${sys.env("SLACK_ID")}> "
     } else {
       ""
     }
 
-    // レビュー依頼の有無でメッセージの文面(催促 or 単なるお知らせ)を切り替える。
     val message = if (isReviewer) {
       "レビュー依頼が残っているみたいです！至急確認しましょう！"
     } else {
