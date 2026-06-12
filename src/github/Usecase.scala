@@ -4,7 +4,7 @@ import upickle.default._
 
 object Usecase {
   def getRepos = {
-    val userName = sys.env("GITHUB_USERNAME")
+    val userName = config.Config.instance.githubUsername
 
     val userRepos = RepoRepository.findByUsername(userName)
 
@@ -39,7 +39,7 @@ object Usecase {
   }
 
   def getAssignPulls = {
-    val userName = sys.env("GITHUB_USERNAME")
+    val userName = config.Config.instance.githubUsername
 
     val (repos, teamSlugs) = getRepos
 

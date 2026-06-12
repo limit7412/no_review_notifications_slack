@@ -14,7 +14,7 @@ object Usecase {
     val isReviewer = reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
 
     val mention = if (isReviewer && !isHoliday) {
-      s"<@${sys.env("SLACK_ID")}> "
+      s"<@${config.Config.instance.slackId}> "
     } else {
       ""
     }
