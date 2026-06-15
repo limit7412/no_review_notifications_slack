@@ -47,17 +47,19 @@ object Usecase {
       ),
       slack.Models.Attachment(
         title = "reviewer",
-        color = if (reviewerPulls.nonEmpty) "#dc143c" else "#D8D8D8",
+        color = slack.Color.select(reviewerPulls.nonEmpty, slack.Color.Crimson),
         text = reviewerPulls.map(_.toSlackLink()).mkString("\n")
       ),
       slack.Models.Attachment(
         title = "reviewer(team)",
-        color = if (teamReviewerPulls.nonEmpty) "#ff8c00" else "#D8D8D8",
+        color = slack.Color
+          .select(teamReviewerPulls.nonEmpty, slack.Color.DarkOrange),
         text = teamReviewerPulls.map(_.toSlackLink()).mkString("\n")
       ),
       slack.Models.Attachment(
         title = "assign",
-        color = if (assignPulls.nonEmpty) "#1e90ff" else "#D8D8D8",
+        color =
+          slack.Color.select(assignPulls.nonEmpty, slack.Color.DodgerBlue),
         text = assignPulls.map(_.toSlackLink()).mkString("\n")
       )
     )
