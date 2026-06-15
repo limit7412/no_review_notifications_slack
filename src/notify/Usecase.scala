@@ -1,15 +1,30 @@
 package notify
 
-import slack.PostRepository
-import slack.Models
+import errors.AppError
 
 object Usecase {
-  def check = {
-    val isHoliday = holiday.CheckHolidayRepository.get
+  def check: Either[AppError, Unit] =
+    holiday.CheckHolidayRepository.get.flatMap { isHoliday =>
+      github.Usecase.getAssignPulls.flatMap {
+        case (assignPulls, reviewerPulls, teamReviewerPulls) =>
+          slack.PostRepository.sendAttachments(
+            buildAttachments(
+              isHoliday,
+              assignPulls,
+              reviewerPulls,
+              teamReviewerPulls
+            )
+          )
+      }
+    }
 
-    val (assignPulls, reviewerPulls, teamReviewerPulls) =
-      github.Usecase.getAssignPulls
-
+  // 通知メッセージ(Slack Attachment)を組み立てる純粋ロジック
+  private def buildAttachments(
+      isHoliday: Boolean,
+      assignPulls: List[github.Models.Pull],
+      reviewerPulls: List[github.Models.Pull],
+      teamReviewerPulls: List[github.Models.Pull]
+  ): List[slack.Models.Attachment] = {
     // 片方でもレビュアー指名されているPRが存在すれば通知対象
     val isReviewer = reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
 
@@ -25,7 +40,7 @@ object Usecase {
       "現在アサインされているレビューをお知らせします！"
     }
 
-    val attachment = List(
+    List(
       slack.Models.Attachment(
         fallback = message,
         pretext = mention + message
@@ -46,7 +61,5 @@ object Usecase {
         text = assignPulls.map(_.toSlackLink()).mkString("\n")
       )
     )
-
-    slack.PostRepository.sendAttachments(attachment)
   }
 }
