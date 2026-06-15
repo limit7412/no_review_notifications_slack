@@ -2,6 +2,7 @@ package serverless
 
 import sttp.client4.quick._
 import upickle.default._
+import scala.annotation.tailrec
 
 object Lambda {
   case class CloudWatchScheduledEventRequest(
@@ -20,7 +21,11 @@ object Lambda {
 
     this
   }
-  private def handler[A: Reader](callback: A => Response): Lambda.type = {
+  // Lambda カスタムランタイムのイベントループ。
+  // /next で次の呼び出しを取得 → callback 実行 → /response か /error を通知、を繰り返す。
+  // 末尾再帰(@tailrec)とし、長時間稼働(ウォーム)でもスタックが伸びないことを保証する。
+  @tailrec
+  private def handler[A: Reader](callback: A => Response): Nothing = {
     val response = quickRequest
       .get(
         uri"http://${sys.env("AWS_LAMBDA_RUNTIME_API")}/2018-06-01/runtime/invocation/next"
@@ -58,6 +63,5 @@ object Lambda {
     }
 
     handler[A](callback)
-    this
   }
 }
