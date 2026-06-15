@@ -4,19 +4,19 @@ import errors.AppError
 
 object Usecase {
   def check: Either[AppError, Unit] =
-    holiday.CheckHolidayRepository.get.flatMap { isHoliday =>
-      github.Usecase.getAssignPulls.flatMap {
-        case (assignPulls, reviewerPulls, teamReviewerPulls) =>
-          slack.PostRepository.sendAttachments(
-            buildAttachments(
-              isHoliday,
-              assignPulls,
-              reviewerPulls,
-              teamReviewerPulls
-            )
-          )
-      }
-    }
+    for {
+      isHoliday <- holiday.CheckHolidayRepository.get
+      pulls <- github.Usecase.getAssignPulls
+      (assignPulls, reviewerPulls, teamReviewerPulls) = pulls
+      _ <- slack.PostRepository.sendAttachments(
+        buildAttachments(
+          isHoliday,
+          assignPulls,
+          reviewerPulls,
+          teamReviewerPulls
+        )
+      )
+    } yield ()
 
   // 通知メッセージ(Slack Attachment)を組み立てる純粋ロジック
   private def buildAttachments(
