@@ -26,7 +26,11 @@ object Usecase {
       val teamRepos = teamReposNested.flatten
       // 本人が所属するチームの slug 一覧。後段でチーム宛レビュー依頼の判定に使う
       val teamSlugs = orgTeams.flatMap((_, teams) => teams).map(_.slug)
-      (userRepos ++ teamRepos, teamSlugs)
+      // userRepos と teamRepos、または複数チーム間で同一リポジトリが重複しうるため
+      // full_name をキーに一意化する。これにより PullRepository.findByFullName の
+      // 無駄な呼び出しと Slack 通知での PR 重複表示を防ぐ
+      val repos = (userRepos ++ teamRepos).distinctBy(_.full_name)
+      (repos, teamSlugs)
     }
   }
 
