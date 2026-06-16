@@ -1,6 +1,6 @@
 package github
 
-import errors.{AppError, traverse}
+import errors.{AppError, traverse, parTraverse}
 
 object Usecase {
   def getRepos: Either[AppError, (List[Models.Repo], List[String])] = {
@@ -45,8 +45,9 @@ object Usecase {
         .distinctBy { case (org, team) => (org.login, team.slug) }
 
       // 本人が所属するチームがアクセスできるリポジトリ
-      // (org/team を順に取得し、失敗時は以降を呼ばず短絡する)
-      teamReposNested <- traverse(expanded) { case (org, team) =>
+      // チーム数に比例して遅くなるため並列取得する(失敗時は元の順序で最初の
+      // エラーを返す)
+      teamReposNested <- parTraverse(expanded) { case (org, team) =>
         RepoRepository.findByTeam(org.login, team.slug)
       }
     } yield {
@@ -94,9 +95,10 @@ object Usecase {
       (repos, teamSlugs) = reposAndSlugs
 
       // 対象リポジトリすべての open PR を集約する
-      // repo.owner は Option のため owner 不明のリポジトリは対象から除外し、
-      // (owner, repo) を順に取得して失敗時は以降を呼ばず短絡する
-      pullsNested <- traverse(
+      // repo.owner は Option のため owner 不明のリポジトリは対象から除外する。
+      // リポジトリ数に比例して遅くなるため並列取得する(失敗時は元の順序で
+      // 最初のエラーを返す。逐次の短絡とはエラー集約方針を揃えてある)
+      pullsNested <- parTraverse(
         repos.flatMap(repo => repo.owner.toList.map(owner => (owner, repo)))
       ) { case (owner, repo) =>
         PullRepository.findByFullName(owner.login, repo.name)
