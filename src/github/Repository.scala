@@ -71,7 +71,7 @@ private def getListAll[T: Reader](
 
 object RepoRepository {
   def findByUsername(username: String): Either[AppError, List[Models.Repo]] =
-    getList[Models.Repo](
+    getListAll[Models.Repo](
       uri"${GITHUB_API_URL}/users/${username}/repos",
       s"user(${username}) repos data"
     )
@@ -80,7 +80,7 @@ object RepoRepository {
       login: String,
       slug: String
   ): Either[AppError, List[Models.Repo]] =
-    getList[Models.Repo](
+    getListAll[Models.Repo](
       uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/repos",
       s"team(${login}, ${slug}) repos data"
     )
@@ -125,7 +125,7 @@ object PullRepository {
       owner: String,
       name: String
   ): Either[AppError, List[Models.Pull]] =
-    getList[Models.Pull](
+    getListAll[Models.Pull](
       uri"${GITHUB_API_URL}/repos/${owner}/${name}/pulls",
       s"target(${owner}, ${name}) pulls data"
     )
