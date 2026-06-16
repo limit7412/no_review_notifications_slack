@@ -32,6 +32,21 @@ private def getList[T: Reader](
       Left(AppError(s"${label} not found: ${e}"))
   }
 
+// GitHub API から単一オブジェクト T を取得する共通処理。getList の単体版。
+private def getOne[T: Reader](
+    path: Uri,
+    label: => String
+): Either[AppError, T] =
+  githubRequest(Method.GET, path).send().body match {
+    case Right(res) =>
+      Try(read[T](res)) match {
+        case Success(value) => Right(value)
+        case Failure(e) => Left(AppError(s"failed to parse ${label}", Some(e)))
+      }
+    case Left(e) =>
+      Left(AppError(s"${label} not found: ${e}"))
+  }
+
 // GitHub API のページネーションを最後まで辿って List[T] を全件取得する。
 // per_page は GitHub の上限である 100 を指定し、取得件数が per_page 未満に
 // なったページを最終ページとみなして打ち切る。エラー時はそこで短絡する。
@@ -68,6 +83,17 @@ object RepoRepository {
     getList[Models.Repo](
       uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/repos",
       s"team(${login}, ${slug}) repos data"
+    )
+}
+
+object AuthenticatedUserRepository {
+  // GITHUB_TOKEN が指す認証ユーザー本人を取得する。
+  // /user/teams など認証ユーザー基準のエンドポイントを使う前提が
+  // GITHUB_USERNAME と一致しているかの検証に用いる。
+  def find: Either[AppError, Models.User] =
+    getOne[Models.User](
+      uri"${GITHUB_API_URL}/user",
+      "authenticated user data"
     )
 }
 

@@ -7,6 +7,20 @@ object Usecase {
     val userName = config.Config.instance.githubUsername
 
     for {
+      // /user/teams はトークン所有者(認証ユーザー)基準で返るため、通知対象である
+      // GITHUB_USERNAME と認証ユーザーが一致していることを先に検証する。
+      // 不一致のまま進むと別ユーザー基準のチーム/リポジトリで通知してしまうため、
+      // 黙って誤通知せず AppError で明示的に失敗させる。
+      authUser <- AuthenticatedUserRepository.find
+      _ <- Either.cond(
+        authUser.login == userName,
+        (),
+        AppError(
+          s"GITHUB_USERNAME(${userName}) does not match the authenticated user(${authUser.login}); " +
+            "/user/teams is scoped to the token owner"
+        )
+      )
+
       // 本人が所有するリポジトリ
       userRepos <- RepoRepository.findByUsername(userName)
 
