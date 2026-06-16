@@ -18,7 +18,10 @@ object Models {
 
   case class Team(
       name: String = "",
-      slug: String = ""
+      slug: String = "",
+      // GET /user/teams のレスポンスに含まれる所属 org 情報。
+      // チーム宛のレビュー依頼(Pull.requested_teams)では返らないため Option。
+      organization: Option[Organization] = None
   ) derives ReadWriter
 
   case class User(

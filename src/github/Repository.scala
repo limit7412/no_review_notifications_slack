@@ -49,32 +49,14 @@ object RepoRepository {
     )
 }
 
-object OrganizationRepository {
-  def findByUsername(
-      username: String
-  ): Either[AppError, List[Models.Organization]] =
-    getList[Models.Organization](
-      uri"${GITHUB_API_URL}/users/${username}/orgs",
-      s"user(${username}) orgs data"
-    )
-}
-
 object TeamRepository {
-  def findByOrganization(login: String): Either[AppError, List[Models.Team]] =
+  // 認証ユーザーが所属するチーム一覧を1リクエストで取得する。
+  // 各チームには所属 org 情報(organization)が含まれるため、
+  // org -> teams -> members の多段呼び出し(N+1)を排除できる。
+  def findByAuthenticatedUser: Either[AppError, List[Models.Team]] =
     getList[Models.Team](
-      uri"${GITHUB_API_URL}/orgs/${login}/teams",
-      s"org(${login}) teams data"
-    )
-}
-
-object UserRepository {
-  def findByTeam(
-      login: String,
-      slug: String
-  ): Either[AppError, List[Models.User]] =
-    getList[Models.User](
-      uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}/members",
-      s"team(${login}, ${slug}) members data"
+      uri"${GITHUB_API_URL}/user/teams",
+      "authenticated user teams data"
     )
 }
 

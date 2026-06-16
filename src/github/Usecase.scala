@@ -10,22 +10,23 @@ object Usecase {
       // 本人が所有するリポジトリ
       userRepos <- RepoRepository.findByUsername(userName)
 
-      // 本人が所属する org 一覧
-      orgs <- OrganizationRepository.findByUsername(userName)
-
-      // 各 org について、本人がメンバーになっているチームだけを抽出する
-      // (org -> 所属チーム一覧 の対応)
-      orgTeams <- traverse(orgs)(memberTeamsOf(_, userName))
+      // 本人が所属するチーム一覧(org 情報込み)を1リクエストで取得する。
+      // GET /user/teams を使うことで org -> teams -> members の N+1 を排除する。
+      teams <- TeamRepository.findByAuthenticatedUser
 
       // 本人が所属するチームがアクセスできるリポジトリ
-      // (org/team を平坦化してから順に取得し、失敗時は以降を呼ばず短絡する)
-      teamReposNested <- traverse(
-        orgTeams.flatMap((org, teams) => teams.map(team => (org, team)))
-      ) { case (org, team) => RepoRepository.findByTeam(org.login, team.slug) }
+      // (チームを順に取得し、失敗時は以降を呼ばず短絡する)
+      // org 情報を持たないチームは取得対象がないため空リストを返す
+      teamReposNested <- traverse(teams) { team =>
+        team.organization match {
+          case Some(org) => RepoRepository.findByTeam(org.login, team.slug)
+          case None      => Right(Nil)
+        }
+      }
     } yield {
       val teamRepos = teamReposNested.flatten
       // 本人が所属するチームの slug 一覧。後段でチーム宛レビュー依頼の判定に使う
-      val teamSlugs = orgTeams.flatMap((_, teams) => teams).map(_.slug)
+      val teamSlugs = teams.map(_.slug)
       // userRepos と teamRepos、または複数チーム間で同一リポジトリが重複しうるため
       // full_name をキーに一意化する。これにより PullRepository.findByFullName の
       // 無駄な呼び出しと Slack 通知での PR 重複表示を防ぐ
@@ -33,20 +34,6 @@ object Usecase {
       (repos, teamSlugs)
     }
   }
-
-  // 指定 org のチームのうち、本人がメンバーになっているものだけを返す
-  private def memberTeamsOf(
-      org: Models.Organization,
-      userName: String
-  ): Either[AppError, (Models.Organization, List[Models.Team])] =
-    for {
-      teams <- TeamRepository.findByOrganization(org.login)
-      memberships <- traverse(teams) { team =>
-        UserRepository
-          .findByTeam(org.login, team.slug)
-          .map(members => (team, members.exists(_.login == userName)))
-      }
-    } yield (org, memberships.collect { case (team, true) => team })
 
   def getAssignPulls: Either[
     AppError,
