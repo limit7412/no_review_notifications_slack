@@ -15,14 +15,11 @@ object Usecase {
       teams <- TeamRepository.findByAuthenticatedUser
 
       // 本人が所属するチームがアクセスできるリポジトリ
-      // (チームを順に取得し、失敗時は以降を呼ばず短絡する)
-      // org 情報を持たないチームは取得対象がないため空リストを返す
-      teamReposNested <- traverse(teams) { team =>
-        team.organization match {
-          case Some(org) => RepoRepository.findByTeam(org.login, team.slug)
-          case None      => Right(Nil)
-        }
-      }
+      // org 情報を持つチームだけを (org, slug) に平坦化してから順に取得し、
+      // 失敗時は以降を呼ばず短絡する
+      teamReposNested <- traverse(
+        teams.flatMap(team => team.organization.toList.map(org => (org, team.slug)))
+      ) { case (org, slug) => RepoRepository.findByTeam(org.login, slug) }
     } yield {
       val teamRepos = teamReposNested.flatten
       // 本人が所属するチームの slug 一覧。後段でチーム宛レビュー依頼の判定に使う
