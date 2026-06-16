@@ -24,26 +24,63 @@ object Usecase {
       // 本人が所有するリポジトリ
       userRepos <- RepoRepository.findByUsername(userName)
 
-      // 本人が所属するチーム一覧(org 情報込み)を1リクエストで取得する。
+      // 本人が直接所属するチーム一覧(org 情報込み)を1リクエストで取得する。
       // GET /user/teams を使うことで org -> teams -> members の N+1 を排除する。
-      teams <- TeamRepository.findByAuthenticatedUser
+      directTeams <- TeamRepository.findByAuthenticatedUser
+
+      // 直接所属チームに加えて親チームも判定対象に含める。
+      // GitHub では親チームの member 一覧に子チームのメンバーも含まれ、
+      // 親チーム宛のレビュー依頼/メンションは子チームのメンバーにも届く。
+      // /user/teams は直接所属チームのみ返すため、親を辿って補完する。
+      // (org 情報を持つチームのみ対象。失敗時は以降を呼ばず短絡する)
+      expandedNested <- traverse(
+        directTeams.flatMap(team =>
+          team.organization.toList.map(org => (org, team))
+        )
+      ) { case (org, team) =>
+        teamWithAncestors(org, team).map(_.map(t => (org, t)))
+      }
+      // org/slug をキーに一意化する(複数チームが同じ親を持つ場合など)
+      expanded = expandedNested.flatten
+        .distinctBy { case (org, team) => (org.login, team.slug) }
 
       // 本人が所属するチームがアクセスできるリポジトリ
-      // org 情報を持つチームだけを (org, slug) に平坦化してから順に取得し、
-      // 失敗時は以降を呼ばず短絡する
-      teamReposNested <- traverse(
-        teams.flatMap(team => team.organization.toList.map(org => (org, team.slug)))
-      ) { case (org, slug) => RepoRepository.findByTeam(org.login, slug) }
+      // (org/team を順に取得し、失敗時は以降を呼ばず短絡する)
+      teamReposNested <- traverse(expanded) { case (org, team) =>
+        RepoRepository.findByTeam(org.login, team.slug)
+      }
     } yield {
       val teamRepos = teamReposNested.flatten
-      // 本人が所属するチームの slug 一覧。後段でチーム宛レビュー依頼の判定に使う
-      val teamSlugs = teams.map(_.slug)
+      // 本人が所属する(親も含む)チームの slug 一覧。チーム宛レビュー依頼の判定に使う
+      val teamSlugs = expanded.map { case (_, team) => team.slug }.distinct
       // userRepos と teamRepos、または複数チーム間で同一リポジトリが重複しうるため
       // full_name をキーに一意化する。これにより PullRepository.findByFullName の
       // 無駄な呼び出しと Slack 通知での PR 重複表示を防ぐ
       val repos = (userRepos ++ teamRepos).distinctBy(_.full_name)
       (repos, teamSlugs)
     }
+  }
+
+  // 指定チームから親チームを根まで辿り、自身と全祖先チームを返す。
+  // /user/teams が返す parent は1階層分しか展開されないため、さらに上の親は
+  // TeamRepository.findBySlug で取得する。辿る回数はネストの深さに比例するだけで、
+  // チーム数 × メンバー数の N+1 には戻らない。
+  private def teamWithAncestors(
+      org: Models.Organization,
+      team: Models.Team
+  ): Either[AppError, List[Models.Team]] = {
+    def loop(
+        current: Models.Team,
+        acc: List[Models.Team]
+    ): Either[AppError, List[Models.Team]] =
+      current.parent match {
+        case None => Right(current :: acc)
+        case Some(parent) =>
+          TeamRepository
+            .findBySlug(org.login, parent.slug)
+            .flatMap(full => loop(full, current :: acc))
+      }
+    loop(team, Nil)
   }
 
   def getAssignPulls: Either[

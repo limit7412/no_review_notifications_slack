@@ -21,7 +21,10 @@ object Models {
       slug: String = "",
       // GET /user/teams のレスポンスに含まれる所属 org 情報。
       // チーム宛のレビュー依頼(Pull.requested_teams)では返らないため Option。
-      organization: Option[Organization] = None
+      organization: Option[Organization] = None,
+      // ネストされたチームの親チーム(直近1階層)。所属していないチームの
+      // レスポンスには含まれないため Option。親チームの判定に使う。
+      parent: Option[Team] = None
   ) derives ReadWriter
 
   case class User(

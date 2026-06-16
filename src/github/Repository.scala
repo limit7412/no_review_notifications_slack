@@ -107,6 +107,17 @@ object TeamRepository {
       uri"${GITHUB_API_URL}/user/teams",
       "authenticated user teams data"
     )
+
+  // 単一チームの完全な情報を取得する。/user/teams が返す parent は1階層分
+  // しか展開されないため、親チームをさらに上へ辿る際に使う。
+  def findBySlug(
+      login: String,
+      slug: String
+  ): Either[AppError, Models.Team] =
+    getOne[Models.Team](
+      uri"${GITHUB_API_URL}/orgs/${login}/teams/${slug}",
+      s"team(${login}, ${slug}) data"
+    )
 }
 
 object PullRepository {
