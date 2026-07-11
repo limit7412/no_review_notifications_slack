@@ -33,11 +33,12 @@ WEBHOOK_URL: <通知用webhook（NOTIFY_MODE に対応した Slack/Discord の w
 ALERT_WEBHOOK_URL: <アラート用webhook>
 GITHUB_TOKEN: <github token(classic)>
 GITHUB_USERNAME: <githubユーザーID>
-MENTION_ID: <メンション先ユーザーid（slack: Slack ID / discord: Discord ユーザーID）>
-SLACK_ID: <MENTION_ID 未設定時のフォールバック（後方互換）>
 NOTIFY_MODE: <slack | discord（未設定時は slack）>
 ENV: <環境名>
 ```
+
+レビュー依頼がある場合の通知はチャンネル全体メンション（Slack: `<!channel>` /
+Discord: `@everyone`）で行うため、メンション先を指定する環境変数は不要。
 
 ## 通知モード (Discord 対応)
 
@@ -50,8 +51,5 @@ Discord モードに切り替える場合の設定:
 
 1. `NOTIFY_MODE: discord` を設定する
 2. `WEBHOOK_URL` を Discord チャンネルの webhook URL に変更する
-3. `MENTION_ID` を Discord のユーザーID（数値ID）に設定する
 
 不正な `NOTIFY_MODE` を指定した場合は起動時にエラーで即座に失敗する。
-`MENTION_ID` は未設定時 `SLACK_ID` にフォールバックするため、既存の Slack
-運用は環境変数を変更せずそのまま動作する。

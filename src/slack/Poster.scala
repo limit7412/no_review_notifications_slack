@@ -11,8 +11,8 @@ object Poster extends notify.Poster {
     PostRepository.sendAttachments(toAttachments(message))
 
   private def toAttachments(message: Message): List[Models.Attachment] = {
-    val mention =
-      if (message.mention) s"<@${config.Config.instance.mentionId}> " else ""
+    // チャンネル全体メンション(Slack の `<!channel>`)
+    val mention = if (message.mention) "<!channel> " else ""
 
     // ヘッダ(メンション + 本文)は色・タイトルを持たない attachment とする
     val header = Models.Attachment(

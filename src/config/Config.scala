@@ -6,9 +6,6 @@ package config
 case class Config(
     githubToken: String,
     githubUsername: String,
-    // メンション先ユーザーID。slack モードでは Slack ID、discord モードでは
-    // Discord のユーザーIDを設定する。
-    mentionId: String,
     webhookUrl: String,
     // 通知先モード("slack" / "discord")。未設定時は後方互換で "slack"。
     notifyMode: String,
@@ -27,15 +24,6 @@ object Config {
     Config(
       githubToken = require("GITHUB_TOKEN"),
       githubUsername = require("GITHUB_USERNAME"),
-      // MENTION_ID を優先し、未設定時は後方互換で SLACK_ID にフォールバックする。
-      mentionId = sys.env
-        .get("MENTION_ID")
-        .orElse(sys.env.get("SLACK_ID"))
-        .getOrElse(
-          throw new RuntimeException(
-            "required environment variable not set: MENTION_ID (or SLACK_ID)"
-          )
-        ),
       webhookUrl = require("WEBHOOK_URL"),
       notifyMode = loadNotifyMode(),
       env = require("ENV")

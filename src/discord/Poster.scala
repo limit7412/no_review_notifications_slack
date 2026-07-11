@@ -12,9 +12,9 @@ object Poster extends notify.Poster {
   private val MaxDescription = 4096 // embed description の最大文字数
 
   def post(message: Message): Either[AppError, Unit] = {
-    // embed 内ではメンションが機能しないため content に本文と共に設定する
-    val mention =
-      if (message.mention) s"<@${config.Config.instance.mentionId}> " else ""
+    // embed 内ではメンションが機能しないため content に本文と共に設定する。
+    // チャンネル全体メンション(Discord の `@everyone`)。
+    val mention = if (message.mention) "@everyone " else ""
     val content = mention + message.text
 
     val embeds = message.sections.map(sectionToEmbed)
