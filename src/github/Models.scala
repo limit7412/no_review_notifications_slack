@@ -31,9 +31,10 @@ object Models {
       login: String = "",
       html_url: String = ""
   ) derives ReadWriter {
-    def toSlackLink() = {
-      s"<${html_url}|${login}>"
-    }
+    // 送信先非依存の中立リンク表現に変換する。表記(Slack/Discord)への
+    // 変換は各アダプタ側に委ねる。
+    def toLink(): _root_.notify.Models.Link =
+      _root_.notify.Models.Link(html_url, login)
   }
 
   case class Pull(
@@ -46,11 +47,15 @@ object Models {
       requested_teams: List[Team] = Nil,
       base: Option[PullBase] = None
   ) derives ReadWriter {
-    def toSlackLink() = {
+    // 送信先非依存の中立 PR 項目に変換する。リポジトリ名・PR リンク・
+    // 作成者リンク(任意)を分離して保持し、表記への変換はアダプタに委ねる。
+    def toPullItem(): _root_.notify.Models.PullItem = {
       val repoName = base.flatMap(_.repo).map(_.full_name).getOrElse("")
-      val fromSuffix =
-        user.map(u => s" (from ${u.toSlackLink()})").getOrElse("")
-      s"[${repoName}] <${html_url}|${title}>$fromSuffix"
+      _root_.notify.Models.PullItem(
+        repo = repoName,
+        pull = _root_.notify.Models.Link(html_url, title),
+        from = user.map(_.toLink())
+      )
     }
   }
 
