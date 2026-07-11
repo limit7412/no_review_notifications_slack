@@ -6,8 +6,12 @@ package config
 case class Config(
     githubToken: String,
     githubUsername: String,
-    slackId: String,
+    // メンション先ユーザーID。slack モードでは Slack ID、discord モードでは
+    // Discord のユーザーIDを設定する。
+    mentionId: String,
     webhookUrl: String,
+    // 通知先モード("slack" / "discord")。未設定時は後方互換で "slack"。
+    notifyMode: String,
     env: String
 )
 
@@ -16,14 +20,37 @@ object Config {
   // lazy val ではなく val とし、Cold Start の初期化フェーズで欠落を早期検知する。
   val instance: Config = load()
 
+  // サポートする通知モード
+  private val validModes = Set("slack", "discord")
+
   private def load(): Config =
     Config(
       githubToken = require("GITHUB_TOKEN"),
       githubUsername = require("GITHUB_USERNAME"),
-      slackId = require("SLACK_ID"),
+      // MENTION_ID を優先し、未設定時は後方互換で SLACK_ID にフォールバックする。
+      mentionId = sys.env
+        .get("MENTION_ID")
+        .orElse(sys.env.get("SLACK_ID"))
+        .getOrElse(
+          throw new RuntimeException(
+            "required environment variable not set: MENTION_ID (or SLACK_ID)"
+          )
+        ),
       webhookUrl = require("WEBHOOK_URL"),
+      notifyMode = loadNotifyMode(),
       env = require("ENV")
     )
+
+  // NOTIFY_MODE は未設定時 "slack"(後方互換)。不正値は起動時に即エラーとする。
+  private def loadNotifyMode(): String = {
+    val mode = sys.env.getOrElse("NOTIFY_MODE", "slack")
+    if (!validModes.contains(mode)) {
+      throw new RuntimeException(
+        s"invalid NOTIFY_MODE: ${mode} (must be one of ${validModes.mkString(", ")})"
+      )
+    }
+    mode
+  }
 
   private def require(key: String): String =
     sys.env.getOrElse(

@@ -22,4 +22,13 @@ import errors.AppError
       )
 }
 
-def handler(): Either[AppError, Unit] = notify.Usecase.check
+def handler(): Either[AppError, Unit] =
+  notify.Usecase.check(selectPoster())
+
+// NOTIFY_MODE に応じた Poster 実装を選択する。値は config.Config の読み込み時に
+// 検証済みのため、ここでは slack / discord のみを扱う。
+def selectPoster(): notify.Poster =
+  config.Config.instance.notifyMode match {
+    case "discord" => discord.Poster
+    case _         => slack.Poster
+  }
