@@ -4,12 +4,13 @@ import errors.{AppError, traverse}
 import notify.Models.{Message, Section, PullItem, Link}
 
 // notify.Poster の Discord 実装。中立モデル Message を Discord webhook の
-// content + embeds へ変換する。Discord 固有の表記(`<@id>` メンション・
+// content + embeds へ変換する。Discord 固有の表記(`@everyone` メンション・
 // `[text](url)` リンク・Int カラー)はこのアダプタ内に閉じ込める。
 object Poster extends notify.Poster {
   // Discord の制限
-  private val MaxEmbeds = 10 // 1メッセージあたり最大 embed 数
+  private val MaxEmbedsPerMessage = 10 // 1メッセージあたり最大 embed 数
   private val MaxDescription = 4096 // embed description の最大文字数
+  private val MaxMessageChars = 6000 // 1メッセージ内の全 embed 合計文字数
 
   def post(message: Message): Either[AppError, Unit] = {
     // embed 内ではメンションが機能しないため content に本文と共に設定する。
@@ -17,17 +18,19 @@ object Poster extends notify.Poster {
     val mention = if (message.mention) "@everyone " else ""
     val content = mention + message.text
 
-    val embeds = message.sections.map(sectionToEmbed)
+    // 各セクションを、description が 4096 文字を超えないよう行単位で複数 embed に
+    // 分割する(PR を切り捨てず全件残す)。
+    val embeds = message.sections.flatMap(sectionToEmbeds)
 
-    // 1メッセージ最大 10 embeds のため分割する。embed が無い場合でも
-    // content(メンション + 本文)を送るため空チャンクを1つ用意する。
-    val chunks = embeds.grouped(MaxEmbeds).toList match {
-      case Nil     => List(List.empty[Models.Embed])
-      case grouped => grouped
+    // embed を「最大10個」かつ「合計文字数 6000 以内」でメッセージにまとめる。
+    // embed が無い場合でも content(メンション + 本文)を送るため空メッセージを1つ用意する。
+    val messages = packEmbeds(embeds) match {
+      case Nil    => List(List.empty[Models.Embed])
+      case packed => packed
     }
 
-    // メンション + 本文は先頭メッセージにのみ付与し、重複投稿を避ける
-    traverse(chunks.zipWithIndex) { case (chunk, idx) =>
+    // content(メンション + 本文)は先頭メッセージにのみ付与し、重複投稿を避ける
+    traverse(messages.zipWithIndex) { case (chunk, idx) =>
       PostRepository.sendPost(
         Models.Post(
           content = if (idx == 0) content else "",
@@ -37,18 +40,49 @@ object Poster extends notify.Poster {
     }.map(_ => ())
   }
 
-  private def sectionToEmbed(section: Section): Models.Embed =
-    Models.Embed(
-      title = section.title,
-      description = truncate(
-        section.pulls.map(pullItemText).mkString("\n"),
-        MaxDescription
-      ),
-      color = hexToInt(section.color.hex)
-    )
+  // セクションを embed 群へ変換する。description が 4096 文字を超える場合は
+  // 行単位で分割し、複数 embed にまたがって全 PR を残す。
+  // タイトルは先頭 embed のみに付け、継続 embed はタイトル無し(同色)にする。
+  private def sectionToEmbeds(section: Section): List[Models.Embed] = {
+    val color = hexToInt(section.color.hex)
+    val descriptions = splitLines(section.pulls.map(pullItemText), MaxDescription)
+    descriptions match {
+      // PR が無いセクションもタイトルのみの embed として表示する(Slack と揃える)
+      case Nil => List(Models.Embed(title = section.title, color = color))
+      case head :: tail =>
+        Models.Embed(title = section.title, description = head, color = color) ::
+          tail.map(desc => Models.Embed(description = desc, color = color))
+    }
+  }
 
-  private def truncate(s: String, max: Int): String =
-    if (s.length <= max) s else s.take(max)
+  // 行を "\n" 連結したとき maxChars を超えないよう複数チャンクにまとめる。
+  // 1行だけで maxChars を超える場合はその行のみ切り詰める(通常発生しない)。
+  private def splitLines(lines: List[String], maxChars: Int): List[String] = {
+    val (chunks, last) =
+      lines.foldLeft((List.empty[String], "")) { case ((acc, current), line0) =>
+        val line = if (line0.length > maxChars) line0.take(maxChars) else line0
+        if (current.isEmpty) (acc, line)
+        else if (current.length + 1 + line.length <= maxChars)
+          (acc, s"$current\n$line")
+        else (acc :+ current, line)
+      }
+    if (last.isEmpty) chunks else chunks :+ last
+  }
+
+  // embed を「最大 MaxEmbedsPerMessage 個」かつ「title+description の合計文字数が
+  // MaxMessageChars 以内」になるようメッセージ単位へグループ化する。
+  private def packEmbeds(embeds: List[Models.Embed]): List[List[Models.Embed]] = {
+    val (messages, last, _) =
+      embeds.foldLeft((List.empty[List[Models.Embed]], List.empty[Models.Embed], 0)) {
+        case ((msgs, current, chars), embed) =>
+          val size = embed.title.length + embed.description.length
+          val overCount = current.length >= MaxEmbedsPerMessage
+          val overChars = current.nonEmpty && chars + size > MaxMessageChars
+          if (overCount || overChars) (msgs :+ current, List(embed), size)
+          else (msgs, current :+ embed, chars + size)
+      }
+    if (last.isEmpty) messages else messages :+ last
+  }
 
   // Discord のリンク記法 `[text](url)`
   private def linkText(link: Link): String = s"[${link.text}](${link.url})"

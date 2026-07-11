@@ -30,8 +30,10 @@ object Config {
     )
 
   // NOTIFY_MODE は未設定時 "slack"(後方互換)。不正値は起動時に即エラーとする。
+  // 前後空白・大文字小文字の揺れ(例: "Slack ")は正規化して設定ミスを吸収する。
   private def loadNotifyMode(): String = {
-    val mode = sys.env.getOrElse("NOTIFY_MODE", "slack")
+    val mode =
+      sys.env.get("NOTIFY_MODE").map(_.trim.toLowerCase).getOrElse("slack")
     if (!validModes.contains(mode)) {
       throw new RuntimeException(
         s"invalid NOTIFY_MODE: ${mode} (must be one of ${validModes.mkString(", ")})"
