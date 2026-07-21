@@ -40,6 +40,12 @@ ENV: <環境名>
 レビュー依頼がある場合の通知はチャンネル全体メンション（Slack: `<!channel>` /
 Discord: `@everyone`）で行うため、メンション先を指定する環境変数は不要。
 
+## 通知の抑制
+
+通知対象のPR（assign / reviewer / reviewer(team)）がすべて自分
+（`GITHUB_USERNAME`）の作成したPRのみの場合は、誰かのレビュー待ちではないため
+通知を送らない。対象PRが0件の場合は従来どおり通知する。
+
 ## 通知モード (Discord 対応)
 
 `NOTIFY_MODE` で通知先を切り替える。
