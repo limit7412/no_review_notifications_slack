@@ -10,15 +10,33 @@ object Usecase {
       isHoliday <- holiday.CheckHolidayRepository.get
       pulls <- github.Usecase.getAssignPulls
       (assignPulls, reviewerPulls, teamReviewerPulls) = pulls
-      _ <- poster.post(
-        buildMessage(
-          isHoliday,
-          assignPulls,
-          reviewerPulls,
-          teamReviewerPulls
-        )
-      )
+      _ <-
+        // 通知対象がすべて本人作成のPRなら誰かのレビュー待ちではないため通知しない
+        if (
+          isOnlySelfAuthored(
+            config.Config.instance.githubUsername,
+            assignPulls ++ reviewerPulls ++ teamReviewerPulls
+          )
+        ) Right(())
+        else
+          poster.post(
+            buildMessage(
+              isHoliday,
+              assignPulls,
+              reviewerPulls,
+              teamReviewerPulls
+            )
+          )
     } yield ()
+
+  // 通知対象のPRが1件以上あり、かつ全件が本人(userName)作成かを判定する。
+  // 0件の場合は従来どおり通知するため false。作成者不明(user が None)のPRは
+  // 判定できないため他人作成とみなし、通知する安全側に倒す。
+  private[notify] def isOnlySelfAuthored(
+      userName: String,
+      pulls: List[github.Models.Pull]
+  ): Boolean =
+    pulls.nonEmpty && pulls.forall(_.user.exists(_.login == userName))
 
   // 通知メッセージ(中立モデル)を組み立てる純粋ロジック。
   private def buildMessage(
