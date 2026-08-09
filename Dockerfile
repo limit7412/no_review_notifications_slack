@@ -18,11 +18,14 @@ FROM --platform=linux/amd64 virtuslab/scala-cli:1.16.0 AS build-image
 #   file                  : 静的リンクの検証用 (下部参照)
 #   libssl-dev / zlib1g-dev: 静的リンクする libcurl の TLS / gzip 展開に使う
 #                            (Debian の -dev パッケージは静的アーカイブ(.a)も含む)
+#   libzstd-dev           : libcurl ではなく libcrypto.a が要求する。Debian の OpenSSL は
+#                            zstd 圧縮 BIO 込みでビルドされており、静的リンクすると
+#                            c_zstd.o が引き込まれて ZSTD_* が未解決になる
 #   libidn2 / libunistring: libcurl ではなく sttp-model が @link("idn2") で要求する
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
          curl ca-certificates file \
-         libssl-dev zlib1g-dev libidn2-dev libunistring-dev \
+         libssl-dev zlib1g-dev libzstd-dev libidn2-dev libunistring-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # c-ares (非同期 DNS ライブラリ) を静的ビルドする。
@@ -98,7 +101,7 @@ RUN scala-cli --power package --native --server=false \
       --native-linking "-Wl,--wrap=dlopen" \
       --native-linking "-Wl,--defsym=__wrap_dlopen=getenv" \
       --native-linking "-L/usr/local/lib" \
-      --native-linking "-Wl,--start-group,-lcurl,-lssl,-lcrypto,-lz,-lcares,-lidn2,-lunistring,--end-group" \
+      --native-linking "-Wl,--start-group,-lcurl,-lssl,-lcrypto,-lz,-lzstd,-lcares,-lidn2,-lunistring,--end-group" \
       -o bootstrap .
 RUN chmod +x bootstrap
 # 静的リンクの検証。musl の ldd は静的バイナリに対し非ゼロ終了するのでそれを利用できたが、
