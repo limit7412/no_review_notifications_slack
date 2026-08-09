@@ -9,7 +9,8 @@ permissions:
 jobs:
   deploy:
     name: deploy
-    runs-on: ubuntu-24.04-arm
+    # bootstrap のビルドが x86_64 (#14) になったため x86_64 ランナーを使う
+    runs-on: ubuntu-24.04
     steps:
       - name: setup node.js
         uses: actions/setup-node@v4

@@ -11,8 +11,20 @@
 ## デプロイ
 
 `bootstrap` (Scala Nativeバイナリ) をビルドして zip でアップロードする。
-ビルドは Lambda 実行環境 (provided.al2023) と glibc/libcurl の互換性を保つため、
-Amazon Linux 2023 のコンテナ内で行う ([Dockerfile](Dockerfile))。
+ビルドは scala-cli 公式イメージ (`virtuslab/scala-cli`, Debian/glibc) 内で
+**静的リンク (static build)** して行う ([Dockerfile](Dockerfile))。
+完全静的リンクにより Lambda 実行環境 (provided.al2023) の glibc/libcurl の
+バージョンに依存しない自己完結バイナリになるため、ビルド環境とランタイム環境の
+ライブラリ整合を取る必要がなくなる (#14)。
+(以前は glibc/libcurl を一致させるため Amazon Linux 2023 上でビルドしていた)。
+
+libcurl は HTTPS 通信のため OpenSSL 込みで、名前解決は c-ares に任せて静的ビルド
+する（完全静的リンクでは glibc の getaddrinfo が使う NSS モジュールを読み込めない）。
+TLS 検証に使う CA バンドルは実行環境である AL2023 のパス
+(`/etc/pki/tls/certs/ca-bundle.crt`) を参照する。
+
+公式イメージが amd64 単一アーキのため、Lambda のアーキテクチャは x86_64。
+Apple Silicon 等でローカルビルドする場合は QEMU エミュレーションになる点に注意。
 
 `serverless-plugin-scripts` により、`sls deploy` / `sls package` の
 パッケージング直前 (`before:package:createDeploymentArtifacts`) に
