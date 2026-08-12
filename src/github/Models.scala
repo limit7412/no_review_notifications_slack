@@ -47,7 +47,7 @@ object Models {
       requested_teams: List[Team] = Nil,
       base: Option[PullBase] = None
   ) derives ReadWriter {
-    // 送信先非依存の中立 PR 項目に変換する。リポジトリ名・PR リンク・
+    // 送信先非依存の中立 PR 項目に変換する。リポジトリ名、PR リンク、
     // 作成者リンク(任意)を分離して保持し、表記への変換はアダプタに委ねる。
     def toPullItem(): _root_.notify.Models.PullItem = {
       val repoName = base.flatMap(_.repo).map(_.full_name).getOrElse("")
