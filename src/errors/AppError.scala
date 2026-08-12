@@ -10,10 +10,10 @@ case class AppError(message: String, cause: Option[Throwable] = None) {
     )
 }
 
-// List[A] の各要素に Either を返す f を順に適用し Either[E, List[B]] にまとめる。
-// - foldLeft で実装しておりスタックセーフ(大きなリストでもオーバーフローしない)。
+// List[A] の各要素に Either を返す f を順に適用し、Either[E, List[B]] にまとめる。
+// - foldLeft で実装しており、大きなリストでもスタックオーバーフローしない。
 // - acc が Left になると flatMap が f を評価しなくなるため、最初のエラー以降は
-//   f(API 呼び出し等)が実行されず短絡する(無駄なリクエストを発生させない)。
+//   f(API 呼び出しなど)が実行されず短絡する(無駄なリクエストを発生させない)。
 def traverse[E, A, B](xs: List[A])(f: A => Either[E, B]): Either[E, List[B]] =
   xs
     .foldLeft[Either[E, List[B]]](Right(Nil)) { (acc, x) =>

@@ -21,7 +21,7 @@ object Usecase {
         )
       )
 
-      // 本人が所有するリポジトリ
+      // 本人が所有するリポジトリを取得する。
       userRepos <- RepoRepository.findByUsername(userName)
 
       // 本人が直接所属するチーム一覧(org 情報込み)を1リクエストで取得する。
@@ -30,7 +30,7 @@ object Usecase {
 
       // 直接所属チームに加えて親チームも判定対象に含める。
       // GitHub では親チームの member 一覧に子チームのメンバーも含まれ、
-      // 親チーム宛のレビュー依頼/メンションは子チームのメンバーにも届く。
+      // 親チーム宛のレビュー依頼やメンションは子チームのメンバーにも届く。
       // /user/teams は直接所属チームのみ返すため、親を辿って補完する。
       // (org 情報を持つチームのみ対象。失敗時は以降を呼ばず短絡する)
       expandedNested <- traverse(
@@ -40,22 +40,22 @@ object Usecase {
       ) { case (org, team) =>
         teamWithAncestors(org, team).map(_.map(t => (org, t)))
       }
-      // org/slug をキーに一意化する(複数チームが同じ親を持つ場合など)
+      // 複数のチームが同じ親を持つ場合があるため、org/slug をキーに一意化する。
       expanded = expandedNested.flatten
         .distinctBy { case (org, team) => (org.login, team.slug) }
 
-      // 本人が所属するチームがアクセスできるリポジトリ
+      // 本人が所属するチームがアクセスできるリポジトリを取得する。
       // (org/team を順に取得し、失敗時は以降を呼ばず短絡する)
       teamReposNested <- traverse(expanded) { case (org, team) =>
         RepoRepository.findByTeam(org.login, team.slug)
       }
     } yield {
       val teamRepos = teamReposNested.flatten
-      // 本人が所属する(親も含む)チームの slug 一覧。チーム宛レビュー依頼の判定に使う
+      // 本人が所属する(親も含む)チームの slug 一覧。チーム宛レビュー依頼の判定に使う。
       val teamSlugs = expanded.map { case (_, team) => team.slug }.distinct
-      // userRepos と teamRepos、または複数チーム間で同一リポジトリが重複しうるため
+      // userRepos と teamRepos の間、または複数チームの間で同一リポジトリが重複しうるため、
       // full_name をキーに一意化する。これにより PullRepository.findByFullName の
-      // 無駄な呼び出しと Slack 通知での PR 重複表示を防ぐ
+      // 無駄な呼び出しと、通知での PR 重複表示を防ぐ。
       val repos = (userRepos ++ teamRepos).distinctBy(_.full_name)
       (repos, teamSlugs)
     }
@@ -63,8 +63,8 @@ object Usecase {
 
   // 指定チームから親チームを根まで辿り、自身と全祖先チームを返す。
   // /user/teams が返す parent は1階層分しか展開されないため、さらに上の親は
-  // TeamRepository.findBySlug で取得する。辿る回数はネストの深さに比例するだけで、
-  // チーム数 × メンバー数の N+1 には戻らない。
+  // TeamRepository.findBySlug で取得する。API を呼ぶ回数はネストの深さに
+  // 比例するだけで、チーム数 × メンバー数の N+1 には戻らない。
   private def teamWithAncestors(
       org: Models.Organization,
       team: Models.Team
@@ -93,9 +93,9 @@ object Usecase {
       reposAndSlugs <- getRepos
       (repos, teamSlugs) = reposAndSlugs
 
-      // 対象リポジトリすべての open PR を集約する
+      // 対象リポジトリすべての open PR を集約する。
       // repo.owner は Option のため owner 不明のリポジトリは対象から除外し、
-      // (owner, repo) を順に取得して失敗時は以降を呼ばず短絡する
+      // (owner, repo) を順に取得して失敗時は以降を呼ばず短絡する。
       pullsNested <- traverse(
         repos.flatMap(repo => repo.owner.toList.map(owner => (owner, repo)))
       ) { case (owner, repo) =>
@@ -104,12 +104,12 @@ object Usecase {
     } yield {
       val allPulls = pullsNested.flatten
 
-      // 本人が assignee に指定されている PR
+      // 本人が assignee に指定されている PR。
       val assignPulls = allPulls.filter(_.assignees.exists(_.login == userName))
-      // 本人が個人としてレビュアー指名されている PR
+      // 本人が個人としてレビュアー指名されている PR。
       val reviewerPulls =
         allPulls.filter(_.requested_reviewers.exists(_.login == userName))
-      // 本人の所属チームがレビュアー指名されている PR
+      // 本人の所属チームがレビュアー指名されている PR。
       val teamReviewerPulls =
         allPulls.filter(
           _.requested_teams.exists(team => teamSlugs.contains(team.slug))

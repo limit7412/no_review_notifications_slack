@@ -4,17 +4,17 @@ import errors.AppError
 import notify.Models.{Message, Section, PullItem, Link}
 
 // notify.Poster の Slack 実装。中立モデル Message を Slack の legacy attachment
-// 形式へ変換する。Slack 固有の表記(`<@id>` メンション・`<url|text>` リンク・
+// 形式へ変換する。Slack 固有の表記(`<!channel>` メンションや `<url|text>` リンク、
 // 16進カラーコード)はこのアダプタ内に閉じ込める。
 object Poster extends notify.Poster {
   def post(message: Message): Either[AppError, Unit] =
     PostRepository.sendAttachments(toAttachments(message))
 
   private def toAttachments(message: Message): List[Models.Attachment] = {
-    // チャンネル全体メンション(Slack の `<!channel>`)
+    // チャンネル全体メンション(Slack の `<!channel>`)。
     val mention = if (message.mention) "<!channel> " else ""
 
-    // ヘッダ(メンション + 本文)は色・タイトルを持たない attachment とする
+    // ヘッダ(メンション + 本文)は、色もタイトルも持たない attachment とする。
     val header = Models.Attachment(
       fallback = message.text,
       pretext = mention + message.text

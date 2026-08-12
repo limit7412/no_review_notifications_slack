@@ -17,7 +17,7 @@ private def githubRequest(method: Method, path: Uri) = {
 
 // GitHub API から List[T] を取得する共通処理。
 // HTTP エラーもパース失敗も AppError の Left として返し、
-// 呼び出し側(Usecase 層)で集約・判断できるようにする。
+// 呼び出し側(Usecase 層)で集約して判断できるようにする。
 private def getList[T: Reader](
     path: Uri,
     label: => String
@@ -47,11 +47,12 @@ private def getOne[T: Reader](
       Left(AppError(s"${label} not found: ${e}"))
   }
 
-// GitHub API のページネーションを最後まで辿って List[T] を全件取得する。
-// per_page は GitHub の上限である 100 を指定し、取得件数が per_page 未満に
-// なったページを最終ページとみなして打ち切る。エラー時はそこで短絡する。
+// 1ページあたりの取得件数。GitHub API の per_page の上限値。
 private val PER_PAGE = 100
 
+// GitHub API のページネーションを最後まで辿り、List[T] を全件取得する。
+// per_page には GitHub の上限である 100 を指定し、取得件数が per_page 未満に
+// なったページを最終ページとみなして打ち切る。エラー時はそこで短絡する。
 private def getListAll[T: Reader](
     path: Uri,
     label: => String
@@ -88,8 +89,8 @@ object RepoRepository {
 
 object AuthenticatedUserRepository {
   // GITHUB_TOKEN が指す認証ユーザー本人を取得する。
-  // /user/teams など認証ユーザー基準のエンドポイントを使う前提が
-  // GITHUB_USERNAME と一致しているかの検証に用いる。
+  // /user/teams など認証ユーザー基準のエンドポイントを使う前に、
+  // 認証ユーザーが GITHUB_USERNAME と一致しているかを検証するために用いる。
   def find: Either[AppError, Models.User] =
     getOne[Models.User](
       uri"${GITHUB_API_URL}/user",
@@ -108,8 +109,8 @@ object TeamRepository {
       "authenticated user teams data"
     )
 
-  // 単一チームの完全な情報を取得する。/user/teams が返す parent は1階層分
-  // しか展開されないため、親チームをさらに上へ辿る際に使う。
+  // 単一チームの完全な情報を取得する。/user/teams が返す parent は1階層分しか
+  // 展開されないため、親チームをさらに上へ辿る際に使う。
   def findBySlug(
       login: String,
       slug: String

@@ -22,8 +22,8 @@ object Lambda {
     this
   }
   // Lambda カスタムランタイムのイベントループ。
-  // /next で次の呼び出しを取得 → callback 実行 → /response か /error を通知、を繰り返す。
-  // 末尾再帰(@tailrec)とし、長時間稼働(ウォーム)でもスタックが伸びないことを保証する。
+  // /next で次の呼び出しを取得し、callback を実行し、結果を /response か /error へ通知する。
+  // この繰り返しを末尾再帰(@tailrec)で行い、長時間稼働(ウォーム)でもスタックが伸びないことを保証する。
   @tailrec
   private def handler[A: Reader](callback: A => Response): Nothing = {
     val response = quickRequest

@@ -4,32 +4,32 @@ import errors.{AppError, traverse}
 import notify.Models.{Message, Section, PullItem, Link}
 
 // notify.Poster の Discord 実装。中立モデル Message を Discord webhook の
-// content + embeds へ変換する。Discord 固有の表記(`@everyone` メンション・
-// `[text](url)` リンク・Int カラー)はこのアダプタ内に閉じ込める。
+// content + embeds へ変換する。Discord 固有の表記(`@everyone` メンションや
+// `[text](url)` リンク、Int のカラー値)はこのアダプタ内に閉じ込める。
 object Poster extends notify.Poster {
-  // Discord の制限
+  // Discord 側の制限値
   private val MaxEmbedsPerMessage = 10 // 1メッセージあたり最大 embed 数
   private val MaxDescription = 4096 // embed description の最大文字数
   private val MaxMessageChars = 6000 // 1メッセージ内の全 embed 合計文字数
 
   def post(message: Message): Either[AppError, Unit] = {
-    // embed 内ではメンションが機能しないため content に本文と共に設定する。
-    // チャンネル全体メンション(Discord の `@everyone`)。
+    // チャンネル全体メンション(Discord の `@everyone`)は embed 内では機能しないため、
+    // content に本文と共に設定する。
     val mention = if (message.mention) "@everyone " else ""
     val content = mention + message.text
 
-    // 各セクションを、description が 4096 文字を超えないよう行単位で複数 embed に
-    // 分割する(PR を切り捨てず全件残す)。
+    // 各セクションを、description が 4096 文字を超えないよう行単位で複数の embed に
+    // 分割する(PR は切り捨てず全件残す)。
     val embeds = message.sections.flatMap(sectionToEmbeds)
 
     // embed を「最大10個」かつ「合計文字数 6000 以内」でメッセージにまとめる。
-    // embed が無い場合でも content(メンション + 本文)を送るため空メッセージを1つ用意する。
+    // embed が無い場合でも content(メンション + 本文)を送るため、空のメッセージを1つ用意する。
     val messages = packEmbeds(embeds) match {
       case Nil    => List(List.empty[Models.Embed])
       case packed => packed
     }
 
-    // content(メンション + 本文)は先頭メッセージにのみ付与し、重複投稿を避ける
+    // content(メンション + 本文)は先頭メッセージにのみ付与し、重複投稿を避ける。
     traverse(messages.zipWithIndex) { case (chunk, idx) =>
       PostRepository.sendPost(
         Models.Post(
@@ -41,13 +41,13 @@ object Poster extends notify.Poster {
   }
 
   // セクションを embed 群へ変換する。description が 4096 文字を超える場合は
-  // 行単位で分割し、複数 embed にまたがって全 PR を残す。
-  // タイトルは先頭 embed のみに付け、継続 embed はタイトル無し(同色)にする。
+  // 行単位で分割し、複数の embed にまたがって全 PR を残す。
+  // タイトルは先頭の embed のみに付け、継続の embed はタイトル無し(同色)にする。
   private def sectionToEmbeds(section: Section): List[Models.Embed] = {
     val color = hexToInt(section.color.hex)
     val descriptions = splitLines(section.pulls.map(pullItemText), MaxDescription)
     descriptions match {
-      // PR が無いセクションもタイトルのみの embed として表示する(Slack と揃える)
+      // PR が無いセクションもタイトルのみの embed として表示する(Slack と表示を揃える)。
       case Nil => List(Models.Embed(title = section.title, color = color))
       case head :: tail =>
         Models.Embed(title = section.title, description = head, color = color) ::
@@ -55,8 +55,8 @@ object Poster extends notify.Poster {
     }
   }
 
-  // 行を "\n" 連結したとき maxChars を超えないよう複数チャンクにまとめる。
-  // 1行だけで maxChars を超える場合はその行のみ切り詰める(通常発生しない)。
+  // 行を "\n" で連結したとき maxChars を超えないよう、複数のチャンクにまとめる。
+  // 1行だけで maxChars を超える場合はその行のみ切り詰める(通常は発生しない)。
   private def splitLines(lines: List[String], maxChars: Int): List[String] = {
     val (chunks, last) =
       lines.foldLeft((List.empty[String], "")) { case ((acc, current), line0) =>
