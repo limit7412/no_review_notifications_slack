@@ -1,6 +1,6 @@
 # ビルド専用イメージ: Scala Native の `bootstrap` を scala-cli 公式イメージ
 # (Debian/glibc) 上で完全静的リンクする (#14)。
-# 生成物はコンテナイメージではなく、抽出して Lambda の zip
+# コンテナイメージ自体はデプロイせず、生成したバイナリを抽出して Lambda の zip
 # (provided.al2023 カスタムランタイム) としてデプロイする。
 #
 # 従来は Lambda 実行環境 (provided.al2023) と glibc/libcurl のバージョンを一致させる
@@ -33,7 +33,7 @@ RUN apt-get update \
 # glibc の getaddrinfo は NSS モジュール (libnss_dns.so.2 等) を dlopen で読み込むため、
 # 完全静的リンクではリンク時と同じ glibc の共有ライブラリが実行環境側に必要になる
 # (ld も "Using 'getaddrinfo' in statically linked applications requires ..." と警告する)。
-# ビルド環境が Debian で実行環境が AL2023 である以上これは満たせず、さらに後述の
+# ビルド環境が Debian で実行環境が AL2023 である以上、これは満たせず、さらに後述の
 # dlopen 差し替えとも両立しない。libcurl の名前解決を c-ares に置き換えると
 # /etc/resolv.conf を読んで自前で DNS を引くようになり、NSS への依存が完全に消える。
 # Debian の libc-ares-dev が置く静的アーカイブは名前がディストリ依存 (libcares_static.a)
@@ -51,7 +51,7 @@ RUN curl -fsSL "https://github.com/c-ares/c-ares/releases/download/v${CARES_VERS
 # 無効にして自前ビルドすれば依存ごと消える。
 # --prefix=/usr/local に入れると clang/ld の既定探索パスに載るため、ヘッダ側の
 # -I 指定は不要 (ライブラリ側は下の -L/usr/local/lib で明示する)。
-# --with-ca-bundle には *実行先* である AL2023 の CA バンドルのパスを指定する。
+# --with-ca-bundle には、ビルド環境ではなく実行先である AL2023 の CA バンドルのパスを指定する。
 # ビルド環境 (Debian) のパスは実行時には存在しないため、ここを誤ると TLS 検証に失敗する。
 ARG CURL_VERSION=8.11.1
 RUN curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" | tar xz -C /tmp \
@@ -84,11 +84,11 @@ RUN scala-cli config power true
 #  --native-linking: リンクオプションは Linux/リンカー依存のため project.scala ではなく
 #    ここで指定し、macOS/Windows でのローカル開発を壊さないようにする。
 #    Scala Native は @link 由来の -l を独自順で並べるため、解決順序に依存しないよう
-#    ライブラリ群は 1 つの -Wl, 引数にまとめて原子的に渡す。
+#    ライブラリ群は 1 つの -Wl, 引数にまとめて渡す。
 #
 #  --wrap=dlopen / --defsym=__wrap_dlopen=getenv について:
 #    Scala Native ランタイムは起動時のスタック境界検出で
-#    dlopen("libpthread.so.0") → dlsym → dlclose と進み、**アンロード済み**の関数
+#    dlopen("libpthread.so.0") -> dlsym -> dlclose と進み、アンロード済みの関数
 #    ポインタを呼ぶ (nativeThreadTLS.c の get_pthread_getattr_np)。glibc 完全静的
 #    リンクではこれが解放済みコードへの分岐になり、起動直後に SIGSEGV する
 #    (println だけの最小プログラムでも再現する Scala Native 0.5.12 側の不具合)。
@@ -104,10 +104,10 @@ RUN scala-cli --power package --native --server=false \
       --native-linking "-Wl,--start-group,-lcurl,-lssl,-lcrypto,-lz,-lzstd,-lcares,-lidn2,-lunistring,--end-group" \
       -o bootstrap .
 RUN chmod +x bootstrap
-# 静的リンクの検証。musl の ldd は静的バイナリに対し非ゼロ終了するのでそれを利用できたが、
-# glibc の ldd は挙動が異なるため file で判定する。
+# 静的リンクの検証。musl の ldd であれば静的バイナリに対して非ゼロ終了するため
+# それで判定できるが、glibc の ldd は挙動が異なるため file で判定する。
 RUN file bootstrap | grep -q "statically linked"
-# 起動できることの検証。環境変数未設定なので Config の読み込みで即終了するのが正常。
-# リンクが通り静的でもある (= 上の 2 つのチェックは通る) のに起動しない、という上記
-# dlopen 由来の状態を検知するため。
+# 起動できることの検証。環境変数が未設定のため、Config の読み込みで即終了するのが正常。
+# リンクが通り静的でもある (上の 2 つのチェックは通る) のに起動はしない、という
+# 上記の dlopen に由来する状態をビルド時に検知する。
 RUN ./bootstrap 2>&1 | grep -q "required environment variable not set"
