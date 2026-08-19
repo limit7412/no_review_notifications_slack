@@ -49,6 +49,9 @@ ENV: <環境名>
 通知対象の PR (assign / reviewer / reviewer(team)) がすべて自分 (`GITHUB_USERNAME`) の作成した PR である場合は、誰かのレビュー待ちではないため通知を送らない。
 対象の PR が0件の場合は通知を送る。
 
+draft の PR は、まだレビューを依頼する段階にないため通知の集計から除外する (#43)。
+除外は assign / reviewer / reviewer(team) のすべてに適用され、上記の抑制判定も除外後の PR で行う。
+
 ## 通知モード
 
 `NOTIFY_MODE` で通知先を切り替える。
