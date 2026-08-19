@@ -41,6 +41,9 @@ object Models {
       html_url: String = "",
       title: String = "",
       state: String = "",
+      // レビュー準備が整っていない PR かどうか。draft の PR はレビュー待ちでは
+      // ないため通知対象から除外する。
+      draft: Boolean = false,
       user: Option[User] = None,
       assignees: List[User] = Nil,
       requested_reviewers: List[User] = Nil,

@@ -102,7 +102,8 @@ object Usecase {
         PullRepository.findByFullName(owner.login, repo.name)
       }
     } yield {
-      val allPulls = pullsNested.flatten
+      // draft の PR はまだレビューを依頼する段階にないため、通知対象から除外する。
+      val allPulls = pullsNested.flatten.filterNot(_.draft)
 
       // 本人が assignee に指定されている PR。
       val assignPulls = allPulls.filter(_.assignees.exists(_.login == userName))
