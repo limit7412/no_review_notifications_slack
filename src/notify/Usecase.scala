@@ -10,45 +10,42 @@ object Usecase {
       isHoliday <- holiday.CheckHolidayRepository.get
       pulls <- github.Usecase.getAssignPulls
       (assignPulls, reviewerPulls, teamReviewerPulls) = pulls
-      _ <-
-        // 通知対象がすべて本人作成の PR なら、誰かのレビュー待ちではないため通知しない。
-        if (
-          isOnlySelfAuthored(
-            config.Config.instance.githubUsername,
-            assignPulls ++ reviewerPulls ++ teamReviewerPulls
-          )
-        ) Right(())
-        else
-          poster.post(
-            buildMessage(
-              isHoliday,
-              assignPulls,
-              reviewerPulls,
-              teamReviewerPulls
-            )
-          )
+      _ <- poster.post(
+        buildMessage(
+          config.Config.instance.githubUsername,
+          isHoliday,
+          assignPulls,
+          reviewerPulls,
+          teamReviewerPulls
+        )
+      )
     } yield ()
 
-  // 通知対象の PR が1件以上あり、かつ全件が本人(userName)作成かを判定する。
-  // 0件の場合は従来どおり通知するため false を返す。作成者不明(user が None)の PR は
-  // 判定できないため他人作成とみなし、通知する安全側に倒す。
-  private[notify] def isOnlySelfAuthored(
+  // 自分がレビューすべき依頼が残っているかを判定する。
+  // レビュアー指名のうち自分(userName)が作成した PR は、自分のレビュー待ちではないため除く。
+  // 個人宛のレビュー依頼に自分の PR が入ることは GitHub の仕様上ないが、
+  // チーム宛のレビュー依頼では自分の PR に自分の所属チームを指名できるため入りうる。
+  // 作成者不明(user が None)の PR は他人作成とみなし、メンションする安全側に倒す。
+  private[notify] def hasReviewRequest(
       userName: String,
-      pulls: List[github.Models.Pull]
+      reviewerPulls: List[github.Models.Pull],
+      teamReviewerPulls: List[github.Models.Pull]
   ): Boolean =
-    pulls.nonEmpty && pulls.forall(_.user.exists(_.login == userName))
+    (reviewerPulls ++ teamReviewerPulls)
+      .exists(pull => !pull.user.exists(_.login == userName))
 
   // 通知メッセージ(中立モデル)を組み立てる純粋ロジック。
   private def buildMessage(
+      userName: String,
       isHoliday: Boolean,
       assignPulls: List[github.Models.Pull],
       reviewerPulls: List[github.Models.Pull],
       teamReviewerPulls: List[github.Models.Pull]
   ): Models.Message = {
-    // 個人宛かチーム宛のどちらかでレビュアー指名されている PR があれば、レビュー依頼ありとみなす。
-    val isReviewer = reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
+    val isReviewer = hasReviewRequest(userName, reviewerPulls, teamReviewerPulls)
 
-    // メンションは、レビュー依頼があり、かつ休日でないときのみ付与する。
+    // メンションは、他人のレビュー依頼があり、かつ休日でないときのみ付与する。
+    // 自分の PR しかない場合はチャンネル全体を呼ばずに済ませる (#36, #45)。
     val mention = isReviewer && !isHoliday
 
     val text = if (isReviewer) {
