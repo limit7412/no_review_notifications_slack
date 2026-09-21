@@ -35,7 +35,43 @@ object Usecase {
       .exists(pull => !pull.user.exists(_.login == userName))
 
   // 通知メッセージ(中立モデル)を組み立てる純粋ロジック。
-  private def buildMessage(
+  // 通知対象の PR が1件も無い場合と1件以上ある場合とで、本文と構成を変える。
+  private[notify] def buildMessage(
+      userName: String,
+      isHoliday: Boolean,
+      assignPulls: List[github.Models.Pull],
+      reviewerPulls: List[github.Models.Pull],
+      teamReviewerPulls: List[github.Models.Pull]
+  ): Models.Message = {
+    val hasPulls =
+      assignPulls.nonEmpty || reviewerPulls.nonEmpty || teamReviewerPulls.nonEmpty
+
+    if (hasPulls) {
+      buildPullsMessage(
+        userName,
+        isHoliday,
+        assignPulls,
+        reviewerPulls,
+        teamReviewerPulls
+      )
+    } else {
+      buildEmptyMessage()
+    }
+  }
+
+  // 通知対象の PR が1件も無い日の通知。無いことだけを本文で伝え、セクションは付けない。
+  // 空のセクションを3つ並べても読み手に伝わる情報は増えないためである。
+  // メンションは他人のレビュー依頼があるときにしか付けない (#45) ので、ここでは常に付けない。
+  private def buildEmptyMessage(): Models.Message =
+    Models.Message(
+      mention = false,
+      text = "現在アサインされているレビューはありません！",
+      sections = Nil
+    )
+
+  // 通知対象の PR が1件以上ある日の通知。PR が無いセクションもタイトルだけを
+  // 非アクティブ色で表示し、どの区分に PR が無いかを示す。
+  private def buildPullsMessage(
       userName: String,
       isHoliday: Boolean,
       assignPulls: List[github.Models.Pull],

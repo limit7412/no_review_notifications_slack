@@ -23,7 +23,8 @@ object Poster extends notify.Poster {
     val embeds = message.sections.flatMap(sectionToEmbeds)
 
     // embed を「最大10個」かつ「合計文字数 6000 以内」でメッセージにまとめる。
-    // embed が無い場合でも content(メンション + 本文)を送るため、空のメッセージを1つ用意する。
+    // 通知対象の PR が1件も無い日はセクションが無く embed も無いが、その場合でも
+    // content(メンション + 本文)を送るため、空のメッセージを1つ用意する。
     val messages = packEmbeds(embeds) match {
       case Nil    => List(List.empty[Models.Embed])
       case packed => packed
@@ -47,7 +48,8 @@ object Poster extends notify.Poster {
     val color = hexToInt(section.color.hex)
     val descriptions = splitLines(section.pulls.map(pullItemText), MaxDescription)
     descriptions match {
-      // PR が無いセクションもタイトルのみの embed として表示する(Slack と表示を揃える)。
+      // PR が無いセクション(他のセクションに PR がある日に限る)も、
+      // タイトルのみの embed として表示する(Slack と表示を揃える)。
       case Nil => List(Models.Embed(title = section.title, color = color))
       case head :: tail =>
         Models.Embed(title = section.title, description = head, color = color) ::
