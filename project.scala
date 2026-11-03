@@ -4,7 +4,7 @@
 // for Scala Native
 //> using platform native
 //> using toolkit default
-//> using dep "com.lihaoyi::upickle:4.4.2"
+//> using dep "com.lihaoyi::upickle:4.4.3"
 
 // 静的リンクのオプションは project.scala には置かない (#14)。
 // -static や -Wl,--start-group 等は Linux/リンカー依存で、macOS/Windows での
