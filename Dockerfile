@@ -35,7 +35,7 @@ RUN curl -fsSL "https://github.com/c-ares/c-ares/releases/download/v${CARES_VERS
 # 無効にして依存ごと消す。
 # --with-ca-bundle には実行先である AL2023 の CA バンドルのパスを指定する。
 # ビルド環境 (Debian) のパスを指定すると、実行時に存在せず TLS 検証に失敗する。
-ARG CURL_VERSION=8.11.1
+ARG CURL_VERSION=8.23.0
 RUN curl -fsSL "https://curl.se/download/curl-${CURL_VERSION}.tar.gz" | tar xz -C /tmp \
     && cd "/tmp/curl-${CURL_VERSION}" \
     && ./configure --prefix=/usr/local --enable-static --disable-shared \
