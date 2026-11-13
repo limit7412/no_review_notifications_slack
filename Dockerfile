@@ -23,7 +23,7 @@ RUN apt-get update \
 # libcurl の名前解決を c-ares に置き換えると /etc/resolv.conf から自前で DNS を引くため、
 # この依存が消える。Debian の libc-ares-dev は静的アーカイブの名前がディストリ依存の
 # ため、ソースからビルドする。
-ARG CARES_VERSION=1.34.5
+ARG CARES_VERSION=1.34.9
 RUN curl -fsSL "https://github.com/c-ares/c-ares/releases/download/v${CARES_VERSION}/c-ares-${CARES_VERSION}.tar.gz" | tar xz -C /tmp \
     && cd "/tmp/c-ares-${CARES_VERSION}" \
     && ./configure --prefix=/usr/local --enable-static --disable-shared --disable-tests \
