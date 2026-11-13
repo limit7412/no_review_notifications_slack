@@ -3,7 +3,7 @@
 # 生成したバイナリを抽出して Lambda の zip (provided.al2023 カスタムランタイム) と
 # してデプロイする。公式イメージは amd64 単一アーキテクチャのため x86_64 を前提とし、
 # タグは再現性のためバージョン固定する。
-FROM --platform=linux/amd64 virtuslab/scala-cli:1.16.0 AS build-image
+FROM --platform=linux/amd64 virtuslab/scala-cli:1.19.0 AS build-image
 
 # ビルドに追加で必要なパッケージ。
 #   curl / ca-certificates: c-ares と libcurl のソース取得
