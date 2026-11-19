@@ -39,6 +39,7 @@ ALERT_WEBHOOK_URL: <アラート用 webhook>
 GITHUB_TOKEN: <github token(classic)>
 GITHUB_USERNAME: <github ユーザー ID>
 NOTIFY_MODE: <slack | discord (未設定時は slack)>
+EXCLUDE_LABELS: <通知対象から外す PR のラベル名 (カンマ区切り。未設定時は除外しない)>
 ENV: <環境名>
 ```
 
@@ -55,6 +56,21 @@ ENV: <環境名>
 
 draft の PR は、まだレビューを依頼する段階にないため通知の集計から除外する (#43)。
 除外は assign / reviewer / reviewer(team) のすべてに適用され、上記のメンション判定も除外後の PR で行う。
+
+## ラベルによる除外
+
+`EXCLUDE_LABELS` に指定したラベルが1つでも付いている PR は、通知の集計から除外する。
+自動マージされる PR のように、人のレビューを待っていない PR を通知に載せないための設定である。
+
+```yaml
+EXCLUDE_LABELS: automerge,dependencies
+```
+
+ラベル名はカンマ区切りで複数指定でき、大文字小文字は区別しない (GitHub のラベル名と同じ扱い)。
+前後の空白は無視する。
+未設定または空の場合は、ラベルによる除外を行わない。
+
+除外の適用範囲は draft と同じで、assign / reviewer / reviewer(team) のすべてに適用され、メンション判定も除外後の PR で行う。
 
 ## 通知対象が無い日の投稿
 

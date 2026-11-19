@@ -9,6 +9,8 @@ case class Config(
     webhookUrl: String,
     // 通知先モード("slack" / "discord")。未設定時は後方互換で "slack"。
     notifyMode: String,
+    // 通知対象から外す PR のラベル名(小文字に正規化済み)。未設定時は空で、何も除外しない。
+    excludeLabels: Set[String],
     env: String
 )
 
@@ -29,6 +31,7 @@ object Config {
       githubUsername = require("GITHUB_USERNAME"),
       webhookUrl = require("WEBHOOK_URL"),
       notifyMode = loadNotifyMode(),
+      excludeLabels = parseLabels(sys.env.getOrElse("EXCLUDE_LABELS", "")),
       env = require("ENV")
     )
 
@@ -45,10 +48,17 @@ object Config {
     mode
   }
 
+  // カンマ区切りのラベル名を集合にする。
+  // GitHub のラベル名は大文字小文字を区別しないため、比較用に小文字へ揃える。
+  // 前後の空白と空要素(末尾のカンマなど)は設定の揺れとして読み捨てる。
+  // 環境変数に依存しない純粋関数とし、Pull 側の判定と同じ正規化を共有する。
+  def parseLabels(raw: String): Set[String] =
+    raw.split(',').map(s => asciiLower(s.trim)).filter(_.nonEmpty).toSet
+
   // ASCII 範囲のみ小文字化する。引数なしの String.toLowerCase() は
   // Locale.getDefault() に依存し、LANG/LC_* が無い Lambda + Scala Native では
   // getDefault() が null を返して NPE になるため、Locale 非依存で実装する。
-  private def asciiLower(s: String): String =
+  def asciiLower(s: String): String =
     s.map(c => if (c >= 'A' && c <= 'Z') (c + 32).toChar else c)
 
   private def require(key: String): String =

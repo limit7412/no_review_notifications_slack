@@ -37,6 +37,12 @@ object Models {
       _root_.notify.Models.Link(html_url, login)
   }
 
+  // PR に付いたラベル。一覧取得(GET /repos/{owner}/{repo}/pulls)の
+  // レスポンスに含まれるため、追加の API 呼び出しなしで参照できる。
+  case class Label(
+      name: String = ""
+  ) derives ReadWriter
+
   case class Pull(
       html_url: String = "",
       title: String = "",
@@ -48,8 +54,17 @@ object Models {
       assignees: List[User] = Nil,
       requested_reviewers: List[User] = Nil,
       requested_teams: List[Team] = Nil,
+      labels: List[Label] = Nil,
       base: Option[PullBase] = None
   ) derives ReadWriter {
+    // 指定したラベルのいずれかが付いているか。names は小文字に正規化済みの
+    // 集合を渡す(Config.excludeLabels)。PR 側のラベル名も同じ規則で小文字に
+    // 揃えて比較する。
+    def hasAnyLabel(names: Set[String]): Boolean =
+      labels.exists(label =>
+        names.contains(config.Config.asciiLower(label.name.trim))
+      )
+
     // 送信先非依存の中立 PR 項目に変換する。リポジトリ名、PR リンク、
     // 作成者リンク(任意)を分離して保持し、表記への変換はアダプタに委ねる。
     def toPullItem(): _root_.notify.Models.PullItem = {

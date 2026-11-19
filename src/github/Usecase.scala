@@ -103,7 +103,13 @@ object Usecase {
       }
     } yield {
       // draft の PR はまだレビューを依頼する段階にないため、通知対象から除外する。
-      val allPulls = pullsNested.flatten.filterNot(_.draft)
+      // 除外ラベル(EXCLUDE_LABELS)の付いた PR も同じ位置で落とす。自動マージされる
+      // PR のように、人のレビューを待っていないものを通知に載せないためである。
+      // 区分に振り分ける前に落とすので、3区分のすべてに除外が適用される。
+      val excludeLabels = config.Config.instance.excludeLabels
+      val allPulls = pullsNested.flatten
+        .filterNot(_.draft)
+        .filterNot(_.hasAnyLabel(excludeLabels))
 
       // 本人が assignee に指定されている PR。
       val assignPulls = allPulls.filter(_.assignees.exists(_.login == userName))
